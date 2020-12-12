@@ -5,10 +5,14 @@ import {
   css,
 } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
+var isDebug = true; 
+
 class RouteInfo {
-  latitude = 0.0;
-  longitude = 0.0;
-  street = "";
+  constructor(latitude, longitude, street){
+    this.latitude = latitude;
+    this.longitude = longitude;
+    this.street = street;
+  }
 }
 
 class RoutePanel extends LitElement {
@@ -18,18 +22,38 @@ class RoutePanel extends LitElement {
       narrow: { type: Boolean },
       route: { type: Object },
       panel: { type: Object },
+      _startDate: { type: Date },
+      _endDate: { type: Date },
+      _entityId: { type: String },
+      _ranges: { type: Object},
     };
   }
 
+  constructor() {
+    super();
+
+    const start = new Date();
+    start.setHours(start.getHours() - 2);
+    start.setMinutes(0);
+    start.setSeconds(0);
+    this._startDate = start;
+
+    const end = new Date();
+    end.setHours(end.getHours() + 1);
+    end.setMinutes(0);
+    end.setSeconds(0);
+    this._endDate = end;
+    this._entityId = "sensor.virtual_person_igor_pakhomov,sensor.virtual_person_iuliia_pakhomova";
+  }
+
   routeData = new Map();
-  startTime = new Date(2020, 11, 11, 0, 0, 0);
-  endTime = new Date(2020, 11, 12, 11, 59, 59);
-  entityId = "sensor.virtual_person_igor_pakhomov,sensor.virtual_person_iuliia_pakhomova";
 
   async UpdateGPSHistory() {
+    this._isLoading = true;
+
     const stateHistory = await this.hass.callApi(
       "GET",
-      `history/period/${this.startTime.toISOString()}?end_time=${this.endTime.toISOString()}&filter_entity_id=${this.entityId}`
+      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this.entityId}`
     );
 
     this.routeData = new Map();
@@ -38,34 +62,32 @@ class RoutePanel extends LitElement {
       return;
     }
 
-    //console.log(stateHistory);
-    
     stateHistory.forEach((stateInfo) => {
       if (stateInfo.length === 0) {
         return;
       }
 
-      //console.log(stateInfo);
-
       var prevState = ""; 
       var routes = new Map();
-      stateInfo.forEach((state) => {
-        if(state.state != "" && state.state !== prevState)
+      stateInfo.forEach((ob_state) => {
+        if(ob_state.state != "" && ob_state.state !== prevState)
         {
-          //console.log(state);
-          routes.set(new Date(state.last_changed), state.state);
-          prevState = state.state;
+          routes.set(new Date(ob_state.last_changed), new RouteInfo(ob_state.attributes.latitude, ob_state.attributes.longitude, ob_state.state));
+          prevState = ob_state.state;
         }
       })
 
       this.routeData.set(stateInfo[0].entity_id, routes);
     });
 
-  //  console.log(this.routeData);
+    if(isDebug){
+      console.log("UpdateGPSHistory:", this.routeData);
+    }
+    this._isLoading = false;
   }
 
-  dateRangeChanged(ev) {
-    this.startDate = ev.detail.startDate;
+  dateRangeChanged(ev) {    
+    this._startDate = ev.detail.startDate;
     const endDate = ev.detail.endDate;
     if (endDate.getHours() === 0 && endDate.getMinutes() === 0) {
       endDate.setDate(endDate.getDate() + 1);
@@ -74,9 +96,67 @@ class RoutePanel extends LitElement {
     this._endDate = endDate;
   }
 
-  render() {
-    this.UpdateGPSHistory();
+  firstUpdated(changedProps) {
+    super.firstUpdated(changedProps);
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    todayEnd.setMilliseconds(todayEnd.getMilliseconds() - 1);
+
+    const todayCopy = new Date(today);
+
+    const yesterday = new Date(todayCopy.setDate(today.getDate() - 1));
+    const yesterdayEnd = new Date(yesterday);
+    yesterdayEnd.setDate(yesterdayEnd.getDate() + 1);
+    yesterdayEnd.setMilliseconds(yesterdayEnd.getMilliseconds() - 1);
+
+    const thisWeekStart = new Date(
+      todayCopy.setDate(today.getDate() - today.getDay())
+    );
+    const thisWeekEnd = new Date(
+      todayCopy.setDate(thisWeekStart.getDate() + 7)
+    );
+    thisWeekEnd.setMilliseconds(thisWeekEnd.getMilliseconds() - 1);
+
+    const lastWeekStart = new Date(
+      todayCopy.setDate(today.getDate() - today.getDay() - 7)
+    );
+    const lastWeekEnd = new Date(
+      todayCopy.setDate(lastWeekStart.getDate() + 7)
+    );
+    lastWeekEnd.setMilliseconds(lastWeekEnd.getMilliseconds() - 1);
+
+    this._ranges = {
+      [this.hass.localize("ui.panel.history.ranges.today")]: [today, todayEnd],
+      [this.hass.localize("ui.panel.history.ranges.yesterday")]: [
+        yesterday,
+        yesterdayEnd,
+      ],
+      [this.hass.localize("ui.panel.history.ranges.this_week")]: [
+        thisWeekStart,
+        thisWeekEnd,
+      ],
+      [this.hass.localize("ui.panel.history.ranges.last_week")]: [
+        lastWeekStart,
+        lastWeekEnd,
+      ],
+    };
+  }
+
+  updated(changedProps) {
+    console.log("updated", changedProps);
+    if (
+      changedProps.has("_startDate") ||
+      changedProps.has("_endDate") ||
+      changedProps.has("_entityId")
+    ) {
+      this.UpdateGPSHistory();
+    }
+  }
+
+  render() {
     return html`
     <ha-app-layout>
     <app-header slot="header" fixed>
@@ -85,7 +165,7 @@ class RoutePanel extends LitElement {
           .hass=${this.hass}
           .narrow=${this.narrow}
         ></ha-menu-button>
-        <div main-title>${this.hass.localize("panel.route")}</div>
+        <div main-title>Route</div> <!--Localize this-->
       </app-toolbar>
     </app-header>
     dsds
@@ -93,9 +173,9 @@ class RoutePanel extends LitElement {
       <div class="flex layout horizontal wrap">
         <ha-date-range-picker
           .hass=${this.hass}
-          ?disabled=false
-          .startDate=${this.startTime}
-          .endDate=${this.endTime}
+          ?disabled=${this._isLoading}
+          .startDate=${this._startDate}
+          .endDate=${this._endDate}
           .ranges=${this._ranges}
           @change=${this.dateRangeChanged}
         ></ha-date-range-picker>
@@ -148,287 +228,176 @@ class RoutePanel extends LitElement {
     this.fitMap();
   }
 
-  /*static get styles() {
-    return css`
-      :host {
-        background-color: #fafafa;
-        padding: 16px;
-        display: block;
-      }
-      wired-card {
-        background-color: white;
-        padding: 16px;
-        display: block;
-        font-size: 18px;
-        max-width: 600px;
-        margin: 0 auto;
-      }
-    `;
-  }*/
+  static get styles() {
+    return [
+      css`
+        :host {
+          font-family: var(--paper-font-body1_-_font-family);
+          -webkit-font-smoothing: var(--paper-font-body1_-_-webkit-font-smoothing);
+          font-size: var(--paper-font-body1_-_font-size);
+          font-weight: var(--paper-font-body1_-_font-weight);
+          line-height: var(--paper-font-body1_-_line-height);
+        }
+        app-header-layout,
+        ha-app-layout {
+          background-color: var(--primary-background-color);
+        }
+        app-header,
+        app-toolbar {
+          background-color: var(--app-header-background-color);
+          font-weight: 400;
+          color: var(--app-header-text-color, white);
+        }
+        app-toolbar {
+          height: var(--header-height);
+        }
+        app-header div[sticky] {
+          height: 48px;
+        }
+        app-toolbar [main-title] {
+          margin-left: 20px;
+        }
+        h1 {
+          font-family: var(--paper-font-headline_-_font-family);
+          -webkit-font-smoothing: var(--paper-font-headline_-_-webkit-font-smoothing);
+          white-space: var(--paper-font-headline_-_white-space);
+          overflow: var(--paper-font-headline_-_overflow);
+          text-overflow: var(--paper-font-headline_-_text-overflow);
+          font-size: var(--paper-font-headline_-_font-size);
+          font-weight: var(--paper-font-headline_-_font-weight);
+          line-height: var(--paper-font-headline_-_line-height);
+        }
+        h2 {
+          font-family: var(--paper-font-title_-_font-family);
+          -webkit-font-smoothing: var(--paper-font-title_-_-webkit-font-smoothing);
+          white-space: var(--paper-font-title_-_white-space);
+          overflow: var(--paper-font-title_-_overflow);
+          text-overflow: var(--paper-font-title_-_text-overflow);
+          font-size: var(--paper-font-title_-_font-size);
+          font-weight: var(--paper-font-title_-_font-weight);
+          line-height: var(--paper-font-title_-_line-height);
+        }
+        h3 {
+          font-family: var(--paper-font-subhead_-_font-family);
+          -webkit-font-smoothing: var(--paper-font-subhead_-_-webkit-font-smoothing);
+          white-space: var(--paper-font-subhead_-_white-space);
+          overflow: var(--paper-font-subhead_-_overflow);
+          text-overflow: var(--paper-font-subhead_-_text-overflow);
+          font-size: var(--paper-font-subhead_-_font-size);
+          font-weight: var(--paper-font-subhead_-_font-weight);
+          line-height: var(--paper-font-subhead_-_line-height);
+        }
+        a {
+          color: var(--primary-color);
+        }
+        .secondary {
+          color: var(--secondary-text-color);
+        }
+        .error {
+          color: var(--error-color);
+        }
+        .warning {
+          color: var(--error-color);
+        }
+        mwc-button.warning {
+          --mdc-theme-primary: var(--error-color);
+        }
+        button.link {
+          background: none;
+          color: inherit;
+          border: none;
+          padding: 0;
+          font: inherit;
+          text-align: left;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        .card-actions a {
+          text-decoration: none;
+        }
+        .card-actions .warning {
+          --mdc-theme-primary: var(--error-color);
+        }
+        .layout.horizontal,
+        .layout.vertical {
+          display: flex;
+        }
+        .layout.inline {
+          display: inline-flex;
+        }
+        .layout.horizontal {
+          flex-direction: row;
+        }
+        .layout.vertical {
+          flex-direction: column;
+        }
+        .layout.wrap {
+          flex-wrap: wrap;
+        }
+        .layout.no-wrap {
+          flex-wrap: nowrap;
+        }
+        .layout.center,
+        .layout.center-center {
+          align-items: center;
+        }
+        .layout.bottom {
+          align-items: flex-end;
+        }
+        .layout.center-justified,
+        .layout.center-center {
+          justify-content: center;
+        }
+        .flex {
+          flex: 1;
+          flex-basis: 0.000000001px;
+        }
+        .flex-auto {
+          flex: 1 1 auto;
+        }
+        .flex-none {
+          flex: none;
+        }
+        .layout.justified {
+          justify-content: space-between;
+        }
+        
+        .content {
+          padding: 0 16px 16px;
+        }
+        .progress-wrapper {
+          height: calc(100vh - 136px);
+        }
+        :host([narrow]) .progress-wrapper {
+          height: calc(100vh - 198px);
+        }
+        .progress-wrapper {
+          position: relative;
+        }
+        ha-date-range-picker {
+          margin-right: 16px;
+          max-width: 100%;
+        }
+        :host([narrow]) ha-date-range-picker {
+          margin-right: 0;
+        }
+        ha-circular-progress {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+        }
+        ha-entity-picker {
+          display: inline-block;
+          flex-grow: 1;
+          max-width: 400px;
+        }
+        :host([narrow]) ha-entity-picker {
+          max-width: none;
+          width: 100%;
+        }
+      `,
+    ];
+  }
 }
 customElements.define("ha-panel-route", RoutePanel);
-
-
-//import "@polymer/app-layout/app-toolbar/app-toolbar";
-//import { html } from "@polymer/polymer/lib/utils/html-tag";
-/* eslint-plugin-disable lit */
-//import { PolymerElement } from "@polymer/polymer/polymer-element";
-//import {
-//  setupLeafletMap,
-//  replaceTileLayer,
-//} from "../../common/dom/setup-leaflet-map";
-//import { computeStateDomain } from "../../common/entity/compute_state_domain";
-//import { computeStateName } from "../../common/entity/compute_state_name";
-//import { navigate } from "../../common/navigate";
-//import "../../components/ha-icon";
-//import "../../components/ha-menu-button";
-//import { defaultRadiusColor } from "../../data/zone";
-//import LocalizeMixin from "../../mixins/localize-mixin";
-//import "./ha-entity-marker";
-//import "../../styles/polymer-ha-style";
-//import "../../layouts/ha-app-layout";
-
-/*
- * @appliesMixin LocalizeMixin
- */
-/*class HaPanelMap2 extends LocalizeMixin(PolymerElement) {
-  static get template() {
-    return html`
-      <style include="ha-style">
-        #map {
-          height: calc(100vh - var(--header-height));
-          width: 100%;
-          z-index: 0;
-          background: inherit;
-        }
-
-        .icon {
-          color: var(--primary-text-color);
-        }
-      </style>
-
-      <ha-app-layout>
-        <app-header fixed slot="header">
-          <app-toolbar>
-            <ha-menu-button
-              hass="[[hass]]"
-              narrow="[[narrow]]"
-            ></ha-menu-button>
-            <div main-title>[[localize('panel.map')]]</div>
-            <template is="dom-if" if="[[computeShowEditZone(hass)]]">
-              <ha-icon-button
-                icon="hass:pencil"
-                on-click="openZonesEditor"
-              ></ha-icon-button>
-            </template>
-          </app-toolbar>
-        </app-header>
-        <div id="map"></div>
-      </ha-app-layout>
-    `;
-  }
-
-  static get properties() {
-    return {
-      hass: {
-        type: Object,
-        observer: "drawEntities",
-      },
-      narrow: Boolean,
-    };
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    this.loadMap();
-  }
-
-  async loadMap() {
-    this._darkMode = this.hass.themes.darkMode;
-    [this._map, this.Leaflet, this._tileLayer] = await setupLeafletMap(
-      this.$.map,
-      this._darkMode
-    );
-    this.drawEntities(this.hass);
-    this._map.invalidateSize();
-    this.fitMap();
-  }
-
-  disconnectedCallback() {
-    if (this._map) {
-      this._map.remove();
-    }
-  }
-
-  computeShowEditZone(hass) {
-    return !__DEMO__ && hass.user.is_admin;
-  }
-
-  openZonesEditor() {
-    navigate(this, "/config/zone");
-  }
-
-  fitMap() {
-    let bounds;
-
-    if (this._mapItems.length === 0) {
-      this._map.setView(
-        new this.Leaflet.LatLng(
-          this.hass.config.latitude,
-          this.hass.config.longitude
-        ),
-        14
-      );
-    } else {
-      bounds = new this.Leaflet.latLngBounds(
-        this._mapItems.map((item) => item.getLatLng())
-      );
-      this._map.fitBounds(bounds.pad(0.5));
-    }
-  }
-
-  drawEntities(hass) {*/
-    /* eslint-disable vars-on-top */
-/*    const map = this._map;
-    if (!map) return;
-
-    if (this._darkMode !== this.hass.themes.darkMode) {
-      this._darkMode = this.hass.themes.darkMode;
-      this._tileLayer = replaceTileLayer(
-        this.Leaflet,
-        map,
-        this._tileLayer,
-        this.hass.themes.darkMode
-      );
-    }
-
-    if (this._mapItems) {
-      this._mapItems.forEach(function (marker) {
-        marker.remove();
-      });
-    }
-    const mapItems = (this._mapItems = []);
-
-    if (this._mapZones) {
-      this._mapZones.forEach(function (marker) {
-        marker.remove();
-      });
-    }
-    const mapZones = (this._mapZones = []);
-
-    Object.keys(hass.states).forEach((entityId) => {
-      const entity = hass.states[entityId];
-
-      if (
-        entity.state === "home" ||
-        !("latitude" in entity.attributes) ||
-        !("longitude" in entity.attributes)
-      ) {
-        return;
-      }
-
-      const title = computeStateName(entity);
-      let icon;
-
-      if (computeStateDomain(entity) === "zone") {
-        // DRAW ZONE
-        if (entity.attributes.passive) return;
-
-        // create icon
-        let iconHTML = "";
-        if (entity.attributes.icon) {
-          const el = document.createElement("ha-icon");
-          el.setAttribute("icon", entity.attributes.icon);
-          iconHTML = el.outerHTML;
-        } else {
-          const el = document.createElement("span");
-          el.innerHTML = title;
-          iconHTML = el.outerHTML;
-        }
-
-        icon = this.Leaflet.divIcon({
-          html: iconHTML,
-          iconSize: [24, 24],
-          className: "icon",
-        });
-
-        // create marker with the icon
-        mapZones.push(
-          this.Leaflet.marker(
-            [entity.attributes.latitude, entity.attributes.longitude],
-            {
-              icon: icon,
-              interactive: false,
-              title: title,
-            }
-          ).addTo(map)
-        );
-
-        // create circle around it
-        mapZones.push(
-          this.Leaflet.circle(
-            [entity.attributes.latitude, entity.attributes.longitude],
-            {
-              interactive: false,
-              color: defaultRadiusColor,
-              radius: entity.attributes.radius,
-            }
-          ).addTo(map)
-        );
-
-        return;
-      }
-
-      // DRAW ENTITY
-      // create icon
-      const entityPicture = entity.attributes.entity_picture || "";
-      const entityName = title
-        .split(" ")
-        .map(function (part) {
-          return part.substr(0, 1);
-        })
-        .join("");*/
-      /* Leaflet clones this element before adding it to the map. This messes up
-         our Polymer object and we can't pass data through. Thus we hack like this. */
-/*      icon = this.Leaflet.divIcon({
-        html:
-          "<ha-entity-marker entity-id='" +
-          entity.entity_id +
-          "' entity-name='" +
-          entityName +
-          "' entity-picture='" +
-          entityPicture +
-          "'></ha-entity-marker>",
-        iconSize: [45, 45],
-        className: "",
-      });
-
-      // create market with the icon
-      mapItems.push(
-        this.Leaflet.marker(
-          [entity.attributes.latitude, entity.attributes.longitude],
-          {
-            icon: icon,
-            title: computeStateName(entity),
-          }
-        ).addTo(map)
-      );
-
-      // create circle around if entity has accuracy
-      if (entity.attributes.gps_accuracy) {
-        mapItems.push(
-          this.Leaflet.circle(
-            [entity.attributes.latitude, entity.attributes.longitude],
-            {
-              interactive: false,
-              color: "#0288D1",
-              radius: entity.attributes.gps_accuracy,
-            }
-          ).addTo(map)
-        );
-      }
-    });
-  }
-}*/
-
-//customElements.define("ha-panel-route", HaPanelMap2);
