@@ -1,5 +1,5 @@
 {
-  "panel": {
-      "route": "Route"
+  "custom_panel": {
+    "route": "Route"
   }
 }
