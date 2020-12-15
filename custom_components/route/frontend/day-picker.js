@@ -11,16 +11,18 @@ import {
 } from "https://unpkg.com/@mdi/js@5.8.55/mdi.js?module";
 
 export class DayPickerElement extends LitElement {
+  constructor() {
+    super();
+    this.open = false;
+  }
+
   static get properties() {
     return {
       hass: { type: Object },
       date: { type: Date },
-      endDate: { type: Date }
+      endDate: { type: Date },
+      open: { type: Boolean },
     };
-  }
-
-  get _daypickerdialog() {
-    return this.shadowRoot.querySelector('.route-day-picker-dialog');
   }
   
   get _daypicker() {
@@ -43,7 +45,8 @@ export class DayPickerElement extends LitElement {
           readonly
         ></paper-input>
       </div>
-      <mwc-dialog class="route-day-picker-dialog">
+      <div @click=${this._closeDateRange} class="route-day-picker-scrim${this.open ? ` route-day-picker-opened` : ``}"></div>
+      <div class="route-day-picker-dialog${this.open ? ` route-day-picker-opened` : ``}">
         <app-datepicker class="route-day-picker"
           min="2020-01-01"
           max="${new Date().toDateString()}"
@@ -57,7 +60,7 @@ export class DayPickerElement extends LitElement {
         <mwc-button @click=${this._applyDateRange} slot="primaryAction">
           ${this.hass.localize("ui.components.date-range-picker.select")}
         </mwc-button>
-      </mwc-dialog>
+      </div>
     `;
   }
 
@@ -76,6 +79,29 @@ export class DayPickerElement extends LitElement {
         --app-datepicker-bg-color: var(--card-background-color);
       }
 
+      .route-day-picker-scrim {
+        display: none;
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+      }
+      
+      .route-day-picker-dialog {
+        background-color: var(--card-background-color);
+        position: absolute;
+        z-index: 3001;
+        display: none;
+      }
+      
+      .route-day-picker-opened {
+        display: block;
+      }
+
       ha-svg-icon {
         margin-right: 8px;
       }
@@ -88,28 +114,23 @@ export class DayPickerElement extends LitElement {
   }
 
   _handleInputClick() {
-    if (!this._daypickerdialog.open) {
-      this._daypickerdialog.open = true;
-    }
+    this.open = true;
   }
 
-  _cancelDateRange() {
-    if (this._daypickerdialog.open) {
-      this._daypickerdialog.open = false;
-    }
+  _closeDateRange() {
+    this.open = false;
   }
 
   _applyDateRange() {
-    if (this._daypickerdialog.open) {
       this.date = new Date(this._daypicker.value);
-      this._daypickerdialog.open = false;
+
       let event = new CustomEvent('change', {
         detail: {
           date: this.date
         }
       });
       this.dispatchEvent(event);
-    }
+      this._closeDateRange();
   }
 }
 
