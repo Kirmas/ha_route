@@ -5,6 +5,8 @@ import {
   css,
 } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
+import "./day-picker.js";
+
 var isDebug = true; 
 
 class RouteInfo {
@@ -25,7 +27,7 @@ class RoutePanel extends LitElement {
       _startDate: { type: Date },
       _endDate: { type: Date },
       _entityId: { type: String },
-      _ranges: { type: Object},
+      _ranges: { type: Object },
     };
   }
 
@@ -33,15 +35,15 @@ class RoutePanel extends LitElement {
     super();
 
     const start = new Date();
-    start.setHours(start.getHours() - 2);
+    start.setHours(0);
     start.setMinutes(0);
     start.setSeconds(0);
     this._startDate = start;
 
     const end = new Date();
-    end.setHours(end.getHours() + 1);
-    end.setMinutes(0);
-    end.setSeconds(0);
+    end.setHours(23);
+    end.setMinutes(59);
+    end.setSeconds(59);
     this._endDate = end;
     this._entityId = "sensor.virtual_person_igor_pakhomov,sensor.virtual_person_iuliia_pakhomova";
   }
@@ -53,7 +55,7 @@ class RoutePanel extends LitElement {
 
     const stateHistory = await this.hass.callApi(
       "GET",
-      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this.entityId}`
+      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityId}`
     );
 
     this.routeData = new Map();
@@ -86,14 +88,15 @@ class RoutePanel extends LitElement {
     this._isLoading = false;
   }
 
-  dateRangeChanged(ev) {    
-    this._startDate = ev.detail.startDate;
-    const endDate = ev.detail.endDate;
-    if (endDate.getHours() === 0 && endDate.getMinutes() === 0) {
-      endDate.setDate(endDate.getDate() + 1);
-      endDate.setMilliseconds(endDate.getMilliseconds() - 1);
-    }
-    this._endDate = endDate;
+  dateRangeChanged(ev) {
+    ev.detail.date.setHours(0);
+    ev.detail.date.setMinutes(0);
+    ev.detail.date.setSeconds(0);
+    this._startDate = new Date(ev.detail.date);
+    ev.detail.date.setHours(23);
+    ev.detail.date.setMinutes(59);
+    ev.detail.date.setSeconds(59);
+    this._endDate = new Date(ev.detail.date);
   }
 
   firstUpdated(changedProps) {
@@ -146,7 +149,7 @@ class RoutePanel extends LitElement {
   }
 
   updated(changedProps) {
-    console.log("updated", changedProps);
+    //console.log("updated", changedProps, this._ranges);
     if (
       changedProps.has("_startDate") ||
       changedProps.has("_endDate") ||
@@ -168,17 +171,15 @@ class RoutePanel extends LitElement {
         <div main-title>Route</div> <!--Localize this-->
       </app-toolbar>
     </app-header>
-    dsds
     <div class="flex content">
       <div class="flex layout horizontal wrap">
-        <ha-date-range-picker
+        <ha-route-day-picker
           .hass=${this.hass}
           ?disabled=${this._isLoading}
-          .startDate=${this._startDate}
-          .endDate=${this._endDate}
+          .date=${this._startDate}
           .ranges=${this._ranges}
           @change=${this.dateRangeChanged}
-        ></ha-date-range-picker>
+        ></ha-route-day-picker>
       </div>
     </div>
   </ha-app-layout>
@@ -400,4 +401,5 @@ class RoutePanel extends LitElement {
     ];
   }
 }
+
 customElements.define("ha-panel-route", RoutePanel);

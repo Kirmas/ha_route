@@ -73,15 +73,15 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     try:
 #        hass.http.register_view(Route(hass, myconfig))
 
-        url = "/api/panel_custom/route/"
-        location = hass.config.path("custom_components/route/frontend/")
-        hass.http.register_static_path(url+"route-panel.js", location)
+        url = "/api/panel_custom/route"
+        location = hass.config.path("custom_components/route/frontend")
+        hass.http.register_static_path(url, location)
  
         custom_panel_config = {
             "name": "ha-panel-route",
             "embed_iframe": False,
             "trust_external": False,
-            "module_url": url,
+            "module_url": url + "/route-panel.js",
         }
 
         config = {}
