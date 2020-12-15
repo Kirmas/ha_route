@@ -84,56 +84,22 @@ export class DayPickerElement extends LitElement {
         display: flex;
         align-items: center;
       }
-      .date-range-ranges {
-        border-right: 1px solid var(--divider-color);
-      }
-      .date-range-footer {
-        display: flex;
-        justify-content: flex-end;
-        padding: 8px;
-        border-top: 1px solid var(--divider-color);
-      }
-      paper-input {
-        display: inline-block;
-        max-width: 250px;
-        min-width: 200px;
-      }
-      paper-input:last-child {
-        margin-left: 8px;
-      }
-      @media only screen and (max-width: 800px) {
-        .date-range-ranges {
-          border-right: none;
-          border-bottom: 1px solid var(--divider-color);
-        }
-      }
-      @media only screen and (max-width: 500px) {
-        paper-input {
-          min-width: inherit;
-        }
-        ha-svg-icon {
-          display: none;
-        }
-      }
     `;
   }
 
   _handleInputClick() {
-    // close the date picker, so it will open again on the click event
     if (!this._daypickerdialog.open) {
       this._daypickerdialog.open = true;
     }
   }
 
   _cancelDateRange() {
-    // close the date picker, so it will open again on the click event
     if (this._daypickerdialog.open) {
       this._daypickerdialog.open = false;
     }
   }
 
   _applyDateRange() {
-    // close the date picker, so it will open again on the click event
     if (this._daypickerdialog.open) {
       this.date = new Date(this._daypicker.value);
       this._daypickerdialog.open = false;
@@ -147,4 +113,4 @@ export class DayPickerElement extends LitElement {
   }
 }
 
-customElements.define("ha-route-day-picker",  DayPickerElement) 
+customElements.define("ha-route-day-picker",  DayPickerElement);
