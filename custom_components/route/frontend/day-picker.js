@@ -31,7 +31,7 @@ export class DayPickerElement extends LitElement {
 
   render(){
     return html`
-      <div @click=${this._handleInputClick} class="date-range-inputs">
+      <div @click=${this._openDateRange} class="date-range-inputs">
         <ha-svg-icon .path=${mdiCalendar}></ha-svg-icon>
         <paper-input
           .value=${this.date.toLocaleString(this.hass.language, {
@@ -54,12 +54,14 @@ export class DayPickerElement extends LitElement {
           locale="${this.hass.language}"
           inline
         label="Label" placeholder="Placeholder"></app-datepicker>
-        <mwc-button @click=${this._cancelDateRange} slot="secondaryAction">
-          ${this.hass.localize("ui.common.cancel")}
-        </mwc-button>
-        <mwc-button @click=${this._applyDateRange} slot="primaryAction">
-          ${this.hass.localize("ui.components.date-range-picker.select")}
-        </mwc-button>
+        <div class="route-day-picker-footer">
+          <mwc-button @click=${this._closeDateRange} slot="secondaryAction">
+            ${this.hass.localize("ui.common.cancel")}
+          </mwc-button>
+          <mwc-button @click=${this._applyDateRange} slot="primaryAction">
+            ${this.hass.localize("ui.components.date-range-picker.select")}
+          </mwc-button>
+        </div>
       </div>
     `;
   }
@@ -67,10 +69,10 @@ export class DayPickerElement extends LitElement {
   static get styles(){
     return css`
       app-datepicker {
-        --app-datepicker-border-top-left-radius: var(--ha-card-border-radius);
-        --app-datepicker-border-top-right-radius: var(--ha-card-border-radius);
-        --app-datepicker-border-bottom-right-radius: var(--ha-card-border-radius);
-        --app-datepicker-border-bottom-left-radius: var(--ha-card-border-radius);
+        --app-datepicker-border-top-left-radius: var(--ha-card-border-radius, 4px);
+        --app-datepicker-border-top-right-radius: var(--ha-card-border-radius, 4px);
+        --app-datepicker-border-bottom-right-radius: var(--ha-card-border-radius, 4px);
+        --app-datepicker-border-bottom-left-radius: var(--ha-card-border-radius, 4px);
         --app-datepicker-accent-color: var(--primary-color);
         --app-datepicker-focused-day-color: var(--text-primary-color);
         --app-datepicker-color: var(--secondary-text-color);
@@ -89,10 +91,12 @@ export class DayPickerElement extends LitElement {
         box-sizing: border-box;
         width: 100%;
         height: 100%;
+        z-index: 3000;
       }
       
       .route-day-picker-dialog {
         background-color: var(--card-background-color);
+        border-radius: var(--ha-card-border-radius, 4px);
         position: absolute;
         z-index: 3001;
         display: none;
@@ -100,6 +104,13 @@ export class DayPickerElement extends LitElement {
       
       .route-day-picker-opened {
         display: block;
+      }
+      
+      .route-day-picker-footer {
+        display: flex;
+        justify-content: flex-end;
+        padding: 8px;
+        border-top: 1px solid var(--divider-color);
       }
 
       ha-svg-icon {
@@ -113,7 +124,7 @@ export class DayPickerElement extends LitElement {
     `;
   }
 
-  _handleInputClick() {
+  _openDateRange() {
     this.open = true;
   }
 
