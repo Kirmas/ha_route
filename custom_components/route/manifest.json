@@ -2,7 +2,7 @@
   "domain": "route",
   "name": "route",
   "documentation": "https://github.com/Kirmas/ha_route",
-  "dependencies": [],
+  "dependencies": ["http"],
   "codeowners": ["@Kirmas"],
   "requirements": []
 }
