@@ -311,4 +311,3 @@ import {
   }
   
   customElements.define("entity-multiselect-picker",  EntityMultiselectPickerElement);
-  
