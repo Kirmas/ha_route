@@ -85,7 +85,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
         }
 
         config = {}
-        config["entity"] = "world"
+        config["entity"] = ["sensor.virtual_person_igor_pakhomov","sensor.virtual_person_iuliia_pakhomova"]
         config["_panel_custom"] = custom_panel_config
 
         hass.components.frontend.async_register_built_in_panel(

@@ -6,6 +6,7 @@ import {
 } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
 import "./day-picker.js";
+import "./entity-multiselect-picker.js";
 
 var isDebug = true; 
 
@@ -26,7 +27,7 @@ class RoutePanel extends LitElement {
       panel: { type: Object },
       _startDate: { type: Date },
       _endDate: { type: Date },
-      _entityId: { type: String },
+      _entityIds: { type: Array },
       _ranges: { type: Object },
     };
   }
@@ -45,7 +46,6 @@ class RoutePanel extends LitElement {
     end.setMinutes(59);
     end.setSeconds(59);
     this._endDate = end;
-    this._entityId = "sensor.virtual_person_igor_pakhomov,sensor.virtual_person_iuliia_pakhomova";
   }
 
   routeData = new Map();
@@ -55,7 +55,7 @@ class RoutePanel extends LitElement {
 
     const stateHistory = await this.hass.callApi(
       "GET",
-      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityId}`
+      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityIds.join()}`
     );
 
     this.routeData = new Map();
@@ -99,8 +99,15 @@ class RoutePanel extends LitElement {
     this._endDate = new Date(ev.detail.date);
   }
 
+  entityChanged(ev) {
+    this._entityIds = ev.detail.date;
+    this.requestUpdate("_entityIds");
+  }
+
   firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
+
+    this._entityIds = [...this.panel.config.entity];
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -149,11 +156,10 @@ class RoutePanel extends LitElement {
   }
 
   updated(changedProps) {
-    //console.log("updated", changedProps, this._ranges);
     if (
       changedProps.has("_startDate") ||
       changedProps.has("_endDate") ||
-      changedProps.has("_entityId")
+      changedProps.has("_entityIds")
     ) {
       this.UpdateGPSHistory();
     }
@@ -162,28 +168,34 @@ class RoutePanel extends LitElement {
   render() {
     return html`
     <ha-app-layout>
-    <app-header slot="header" fixed>
-      <app-toolbar>
-        <ha-menu-button
-          .hass=${this.hass}
-          .narrow=${this.narrow}
-        ></ha-menu-button>
-        <div main-title>Route</div> <!--Localize this-->
-      </app-toolbar>
-    </app-header>
-    <div class="flex content">
-      <div class="flex layout horizontal wrap">
-        <ha-route-day-picker
-          .hass=${this.hass}
-          ?disabled=${this._isLoading}
-          .date=${this._startDate}
-          .ranges=${this._ranges}
-          @change=${this.dateRangeChanged}
-        ></ha-route-day-picker>
+      <app-header slot="header" fixed>
+        <app-toolbar>
+          <ha-menu-button
+            .hass=${this.hass}
+            .narrow=${this.narrow}
+          ></ha-menu-button>
+          <div main-title>Route</div> <!--Localize this-->
+        </app-toolbar>
+      </app-header>
+      <div class="flex content">
+        <div class="flex layout horizontal wrap ${this.narrow ? `route-panel-narrow` : ``}">
+          <ha-route-day-picker
+            .hass=${this.hass}
+            ?disabled=${this._isLoading}
+            .date=${this._startDate}
+            .ranges=${this._ranges}
+            @change=${this.dateRangeChanged}
+          ></ha-route-day-picker>
+          <entity-multiselect-picker
+            .hass=${this.hass}
+            .entityIds=${this.panel.config.entity}
+            .selectedEntityIds=${this._entityIds}
+            @change=${this.entityChanged}
+          ></entity-multiselect-picker>
+        </div>
       </div>
-    </div>
-  </ha-app-layout>
-`;
+    </ha-app-layout>
+  `;
   }
 
   connectedCallback() {
@@ -239,6 +251,27 @@ class RoutePanel extends LitElement {
           font-weight: var(--paper-font-body1_-_font-weight);
           line-height: var(--paper-font-body1_-_line-height);
         }
+        
+        ha-route-day-picker {
+          margin-right: 16px;
+          max-width: 100%;
+        }
+        
+        .route-panel-narrow ha-route-day-picker {
+          margin-right: 0px;
+        }
+
+        entity-multiselect-picker {
+          display: inline-block;
+          flex-grow: 1;
+          max-width: 800px;
+        }
+
+        .route-panel-narrow entity-multiselect-picker {
+          max-width: none;
+          width: 100%;
+        }
+        
         app-header-layout,
         ha-app-layout {
           background-color: var(--primary-background-color);
@@ -379,7 +412,7 @@ class RoutePanel extends LitElement {
           margin-right: 16px;
           max-width: 100%;
         }
-        :host([narrow]) ha-date-range-picker {
+        .narrow ha-date-range-picker {
           margin-right: 0;
         }
         ha-circular-progress {
@@ -387,15 +420,6 @@ class RoutePanel extends LitElement {
           left: 50%;
           top: 50%;
           transform: translate(-50%, -50%);
-        }
-        ha-entity-picker {
-          display: inline-block;
-          flex-grow: 1;
-          max-width: 400px;
-        }
-        :host([narrow]) ha-entity-picker {
-          max-width: none;
-          width: 100%;
         }
       `,
     ];

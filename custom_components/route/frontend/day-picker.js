@@ -20,7 +20,6 @@ export class DayPickerElement extends LitElement {
     return {
       hass: { type: Object },
       date: { type: Date },
-      endDate: { type: Date },
       open: { type: Boolean },
     };
   }
