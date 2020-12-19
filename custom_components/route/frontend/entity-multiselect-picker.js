@@ -150,6 +150,17 @@ export class EntityMultiselectPickerElement extends LitElement {
 
   static get styles(){
     return css`
+      :host {
+        display: inline-block;
+        flex-grow: 1;
+        max-width: 800px;
+      }
+
+      :host([narrow]) {
+        max-width: none;
+        width: 100%;
+      }
+
       .multiselect {
         width: 100%;
       }

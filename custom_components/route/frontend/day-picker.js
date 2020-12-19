@@ -67,6 +67,15 @@ export class DayPickerElement extends LitElement {
 
   static get styles(){
     return css`
+      :host {
+        margin-right: 16px;
+        max-width: 100%;
+      }
+
+      :host([narrow]) {
+        margin-right: 0px;
+      }
+
       app-datepicker {
         --app-datepicker-border-top-left-radius: var(--ha-card-border-radius, 4px);
         --app-datepicker-border-top-right-radius: var(--ha-card-border-radius, 4px);
@@ -115,10 +124,20 @@ export class DayPickerElement extends LitElement {
       ha-svg-icon {
         margin-right: 8px;
       }
+
       .date-range-inputs {
         cursor: pointer;
         display: flex;
         align-items: center;
+      }
+
+      @media only screen and (max-width: 500px) {
+        paper-input {
+          min-width: inherit;
+        }
+        ha-svg-icon {
+          display: none;
+        }
       }
     `;
   }
