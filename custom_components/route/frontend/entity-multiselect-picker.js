@@ -14,7 +14,6 @@ import {
 export class EntityMultiselectPickerElement extends LitElement {
   constructor() {
     super();
-    this.selectedEntityIds = new Array();
     this.open = false;
     this.searchValue = "";
   }
@@ -274,6 +273,7 @@ export class EntityMultiselectPickerElement extends LitElement {
   _clearValues(){
     this._setSearchValue("");
     this.selectedEntityIds = [];
+    this.selectedEntityIdsChanged();
   }
 
   _clearValue(el){
@@ -285,6 +285,7 @@ export class EntityMultiselectPickerElement extends LitElement {
       this.selectedEntityIds.splice(index, 1);
     }
     this.requestUpdate("selectedEntityIds");
+    this.selectedEntityIdsChanged();
   }
 
   _setSearchValue(newValue)
@@ -320,19 +321,18 @@ export class EntityMultiselectPickerElement extends LitElement {
       this.selectedEntityIds.push(clickedEntityId);
     }
     this.requestUpdate("selectedEntityIds");
+    this.selectedEntityIdsChanged();
 
     this._setSearchValue("");
   }
 
-  updated(changedProps) {
-    if (changedProps.has("selectedEntityIds")) {
-      let event = new CustomEvent('change', {
-        detail: {
-          date: this.selectedEntityIds
-        }
-      });
-      this.dispatchEvent(event);
-    }
+  selectedEntityIdsChanged() {
+    let event = new CustomEvent('change', {
+      detail: {
+        date: this.selectedEntityIds
+      }
+    });
+    this.dispatchEvent(event);
   }
 }
 
