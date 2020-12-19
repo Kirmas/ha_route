@@ -25,6 +25,7 @@ class RoutePanel extends LitElement {
       narrow: { type: Boolean },
       route: { type: Object },
       panel: { type: Object },
+      routeData: { type: Map },
       _startDate: { type: Date },
       _endDate: { type: Date },
       _entityIds: { type: Array },
@@ -46,19 +47,22 @@ class RoutePanel extends LitElement {
     end.setMinutes(59);
     end.setSeconds(59);
     this._endDate = end;
+    
+    this.routeData = new Map();
   }
 
-  routeData = new Map();
+  async updateGPSHistory() {
+    this.routeData = new Map();
+    if(this._entityIds.length === 0){
+      return;
+    }
 
-  async UpdateGPSHistory() {
     this._isLoading = true;
 
     const stateHistory = await this.hass.callApi(
       "GET",
       `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityIds.join()}`
     );
-
-    this.routeData = new Map();
 
     if (!stateHistory) {
       return;
@@ -79,13 +83,14 @@ class RoutePanel extends LitElement {
         }
       })
 
-      this.routeData.set(stateInfo[0].entity_id, routes);
-    });
+      this.routeData.set(this.panel.config.entities.get(stateInfo[0].entity_id), routes);
+    });    
+    this._isLoading = false;
+    this.requestUpdate("routeData");
 
     if(isDebug){
-      console.log("UpdateGPSHistory:", this.routeData);
+      console.log("updateGPSHistory:", this.routeData);
     }
-    this._isLoading = false;
   }
 
   dateRangeChanged(ev) {
@@ -106,9 +111,9 @@ class RoutePanel extends LitElement {
 
   firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
-
-    this._entityIds = [...this.panel.config.entity];
-
+    /*Convert data from object to Map*/
+    this.panel.config.entities = new Map(Object.entries(this.panel.config.entities));
+    this._entityIds = Array.from(this.panel.config.entities.keys());
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date(today);
@@ -161,14 +166,12 @@ class RoutePanel extends LitElement {
       changedProps.has("_endDate") ||
       changedProps.has("_entityIds")
     ) {
-      this.UpdateGPSHistory();
+      this.updateGPSHistory();
     }
   }
 
   render() {
     return html`
-    <ha-app-layout>
-      <app-header slot="header" fixed>
         <app-toolbar>
           <ha-menu-button
             .hass=${this.hass}
@@ -176,7 +179,6 @@ class RoutePanel extends LitElement {
           ></ha-menu-button>
           <div main-title>Route</div> <!--Localize this-->
         </app-toolbar>
-      </app-header>
       <div class="flex content">
         <div class="flex layout horizontal wrap ${this.narrow ? `route-panel-narrow` : ``}">
           <ha-route-day-picker
@@ -188,19 +190,27 @@ class RoutePanel extends LitElement {
           ></ha-route-day-picker>
           <entity-multiselect-picker
             .hass=${this.hass}
-            .entityIds=${this.panel.config.entity}
+            .entityIds=${this.panel.config.entities}
             .selectedEntityIds=${this._entityIds}
             @change=${this.entityChanged}
           ></entity-multiselect-picker>
         </div>
       </div>
-    </ha-app-layout>
+      ${
+        this.routeData.size > 0 ?
+          html`<div id="map"></div>`:
+          html`
+            <div class="container no-entries" dir="ltr">
+              ${this.hass.localize("ui.components.data-table.no-data")}
+            </div>
+          `
+        }
   `;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    //this.loadMap();
+  //  this.loadMap();
   }
 
   async setupLeafletMap(
@@ -244,6 +254,11 @@ class RoutePanel extends LitElement {
   static get styles() {
     return [
       css`
+        .no-entries {
+          text-align: center;
+          color: var(--secondary-text-color);
+        }
+
         :host {
           font-family: var(--paper-font-body1_-_font-family);
           -webkit-font-smoothing: var(--paper-font-body1_-_-webkit-font-smoothing);
