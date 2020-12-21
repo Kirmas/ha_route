@@ -7,8 +7,7 @@ import {
 
 import "./day-picker.js";
 import "./entity-multiselect-picker.js";
-
-var isDebug = true; 
+import "./map.js";
 
 class RouteInfo {
   constructor(latitude, longitude, street){
@@ -50,22 +49,34 @@ class RoutePanel extends LitElement {
     this.routeData = new Map();
   }
 
+  shouldUpdate(changedProps) {
+    if(changedProps.has("routeData"))
+    {
+      return !this._isLoading;
+    }
+    return super.shouldUpdate(changedProps);
+  }
+
   async updateGPSHistory() {
-    this.routeData = new Map();
     if(this._entityIds.length === 0){
+      this.routeData = new Map();
       return;
     }
 
     this._isLoading = true;
-
     const stateHistory = await this.hass.callApi(
       "GET",
       `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityIds.join()}`
     );
 
     if (!stateHistory) {
+      this._isLoading = false;
+      this.routeData = new Map();
       return;
     }
+    
+    const prevRouteData = new Map(this.routeData);
+    this.routeData = new Map();
 
     stateHistory.forEach((stateInfo) => {
       if (stateInfo.length === 0) {
@@ -85,11 +96,7 @@ class RoutePanel extends LitElement {
       this.routeData.set(this.panel.config.entities.get(stateInfo[0].entity_id), routes);
     });    
     this._isLoading = false;
-    this.requestUpdate("routeData");
-
-    if(isDebug){
-      console.log("updateGPSHistory:", this.routeData);
-    }
+    this.requestUpdate("routeData", prevRouteData);
   }
 
   dateRangeChanged(ev) {
@@ -104,8 +111,7 @@ class RoutePanel extends LitElement {
   }
 
   entityChanged(ev) {
-    this._entityIds = ev.detail.date;
-    this.requestUpdate("_entityIds");
+    this._entityIds = [...ev.detail.date];
   }
 
   firstUpdated(changedProps) {
@@ -116,6 +122,8 @@ class RoutePanel extends LitElement {
   }
 
   updated(changedProps) {
+    super.updated(changedProps);
+
     if (
       changedProps.has("_startDate") ||
       changedProps.has("_endDate") ||
@@ -152,27 +160,17 @@ class RoutePanel extends LitElement {
           ></entity-multiselect-picker>
         </div>
       </div>
-      ${
-        this.routeData.size > 0 ?
-          html`<div id="map"></div>`:
-          html`
-            <div class="container no-entries" dir="ltr">
-              ${this.hass.localize("ui.components.data-table.no-data")}
-            </div>
-          `
-        }
+      <ha-route-map
+        .hass=${this.hass}
+        .routeData=${this.routeData}
+        ?narrow = ${this.narrow}
+      ></ha-route-map>
   `;
   }
 
   static get styles() {
     return [
       css`
-        /*Move this to map sub object after creation*/
-        .no-entries {
-          text-align: center;
-          color: var(--secondary-text-color);
-        }
-
         app-toolbar {
           background-color: var(--app-header-background-color);
           height: var(--header-height);
