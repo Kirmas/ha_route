@@ -104,6 +104,11 @@ export class MapElement extends LitElement {
         prevValue = value;
       };
     };
+
+    var bounds = new LatLngBounds(
+      this.markers.map((item) => item.getLatLng())
+    );
+    this.map.fitBounds(bounds.pad(0.5));
   }
 
   updated(changedProps) {

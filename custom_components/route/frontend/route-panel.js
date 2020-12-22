@@ -57,6 +57,26 @@ class RoutePanel extends LitElement {
     return super.shouldUpdate(changedProps);
   }
 
+  getDistance(origin, destination) {
+    // return distance in meters
+    var lon1 = this.toRadian(origin[1]),
+        lat1 = this.toRadian(origin[0]),
+        lon2 = this.toRadian(destination[1]),
+        lat2 = this.toRadian(destination[0]);
+
+    var deltaLat = lat2 - lat1;
+    var deltaLon = lon2 - lon1;
+
+    var a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
+    var c = 2 * Math.asin(Math.sqrt(a));
+    var EARTH_RADIUS = 6371;
+    return c * EARTH_RADIUS * 1000;
+  }
+
+  toRadian(degree) {
+      return degree*Math.PI/180;
+  }
+
   async updateGPSHistory() {
     if(this._entityIds.length === 0){
       this.routeData = new Map();
@@ -83,18 +103,56 @@ class RoutePanel extends LitElement {
         return;
       }
 
-      var prevState = ""; 
-      var routes = new Map();
-      stateInfo.forEach((ob_state) => {
-        if(ob_state.state != "" && ob_state.state !== prevState)
-        {
-          routes.set(new Date(ob_state.last_changed), new RouteInfo(ob_state.attributes.latitude, ob_state.attributes.longitude, ob_state.state));
-          prevState = ob_state.state;
-        }
-      })
+      var prev = null; 
 
+      var routes = new Map();
+      for (let index = 0; index < stateInfo.length; index++) {
+        if(stateInfo[index].state == ""){
+          continue;
+        }
+
+        if(stateInfo[index].state === (prev ? prev.state : "")){
+          continue;
+        }
+        if(index + 1 != stateInfo.length)
+        {
+          if(prev){
+            var distance = this.getDistance(
+              [prev.attributes.latitude, prev.attributes.longitude],
+              [stateInfo[index].attributes.latitude, stateInfo[index].attributes.longitude]
+            );
+
+            if(distance < this.panel.config.mindst){
+              console.log(`${stateInfo[index].state} was skiped because distance(${distance}) < ${this.panel.config.mindst}`);
+              continue;
+            }
+          }
+        
+          var deltaTime = (
+            new Date(stateInfo[index + 1].last_changed) - 
+            new Date(stateInfo[index].last_changed)
+          ) / 1000 / 60;
+
+          if(deltaTime < this.panel.config.mintime)
+          {
+            console.log(`${stateInfo[index].state} was skiped because deltaTime(${deltaTime}) < ${this.panel.config.mintime}`);
+            continue;
+          }
+        }
+
+        routes.set(
+          new Date(stateInfo[index].last_changed), 
+          new RouteInfo(
+            stateInfo[index].attributes.latitude, 
+            stateInfo[index].attributes.longitude, stateInfo[index].state
+          )
+        );
+        prev = stateInfo[index];
+      }
+      
       this.routeData.set(this.panel.config.entities.get(stateInfo[0].entity_id), routes);
-    });    
+    });
+    
     this._isLoading = false;
     this.requestUpdate("routeData", prevRouteData);
   }

@@ -17,9 +17,12 @@ DOMAIN = "route"
 SUPPORTED_DOMAINS = ["sensor"]
 CONF_MIN_DST = 'mindst'
 DEFAULT_MIN_DST = 100
+CONF_MIN_TIME = 'mintime'
+DEFAULT_MIN_TIME = 5 #in minute
 
-CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema(
-                {vol.Optional(CONF_MIN_DST, default=DEFAULT_MIN_DST): cv.positive_float,
+CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({
+                vol.Optional(CONF_MIN_DST, default=DEFAULT_MIN_DST): cv.positive_float,
+                vol.Optional(CONF_MIN_TIME, default=DEFAULT_MIN_TIME): cv.positive_int,
                 vol.Required(CONF_DEVICES): vol.All(cv.ensure_list,),
                 })}, extra=vol.ALLOW_EXTRA,)
 
@@ -27,6 +30,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     hass.data[DOMAIN] = {}
     myconfig = {
         "mindst": config[DOMAIN][CONF_MIN_DST],
+        "mintime": config[DOMAIN][CONF_MIN_TIME],
         "devs": config[DOMAIN][CONF_DEVICES],
     }
 
@@ -62,6 +66,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
 
         config = {}
         config["mindst"] = myconfig["mindst"]
+        config["mintime"] = myconfig["mintime"]
         config["entities"] = entities
         config["_panel_custom"] = custom_panel_config
 
