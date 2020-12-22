@@ -1,36 +1,25 @@
 """The route component."""
-import os
 from datetime import datetime
 from datetime import timedelta
-from shutil import copyfile
-from aiohttp import web
 import logging
 import voluptuous as vol
 import json
 import aiohttp
-from homeassistant.core import callback
-from homeassistant.const import (CONF_TOKEN, CONF_TIME_ZONE, CONF_DEVICES)
+from homeassistant.const import CONF_DEVICES
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
-from homeassistant.components.http import HomeAssistantView
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.network import get_url
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = "route"
 SUPPORTED_DOMAINS = ["sensor"]
-CONF_NUMBER_OF_DAYS = 'days'
-DEFAULT_NUMBER_OF_DAYS = 10
 CONF_MIN_DST = 'mindst'
-DEFAULT_MIN_DST = 0.1
+DEFAULT_MIN_DST = 100
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema(
-                {vol.Optional(CONF_NUMBER_OF_DAYS, default=DEFAULT_NUMBER_OF_DAYS): cv.positive_int, 
-                vol.Optional(CONF_MIN_DST, default=DEFAULT_MIN_DST): cv.small_float, 
-                vol.Required(CONF_TIME_ZONE): cv.string, 
-                vol.Required(CONF_TOKEN): cv.string,
+                {vol.Optional(CONF_MIN_DST, default=DEFAULT_MIN_DST): cv.positive_float,
                 vol.Required(CONF_DEVICES): vol.All(cv.ensure_list,),
                 })}, extra=vol.ALLOW_EXTRA,)
 
@@ -38,15 +27,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     hass.data[DOMAIN] = {}
     myconfig = {
         "mindst": config[DOMAIN][CONF_MIN_DST],
-        "numofd": config[DOMAIN][CONF_NUMBER_OF_DAYS],
-        "tz": config[DOMAIN][CONF_TIME_ZONE],
-        "token": config[DOMAIN][CONF_TOKEN],
         "devs": config[DOMAIN][CONF_DEVICES],
-        "haddr": get_url(hass,
-            allow_internal=False,
-            allow_ip=False,
-            require_ssl=True,
-            require_standard_port=True),
     }
 
     sensors_gps = hass.data[DOMAIN]["sensors_gps"] = SensorsGps(hass,myconfig)
@@ -80,6 +61,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
         }
 
         config = {}
+        config["mindst"] = myconfig["mindst"]
         config["entities"] = entities
         config["_panel_custom"] = custom_panel_config
 
