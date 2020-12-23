@@ -1,5 +1,4 @@
 """The route component."""
-from datetime import datetime
 from datetime import timedelta
 import logging
 import voluptuous as vol
@@ -100,8 +99,6 @@ class SensorsGps:
         async_dispatcher_send(self.hass, DOMAIN)
 
     async def getDeviceTrackers(self):
-        timenow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
         for device in self._devs:
             entity_domain = device.split('.')[0]
             if entity_domain == "device_tracker" or entity_domain == "person":
