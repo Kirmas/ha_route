@@ -4,44 +4,52 @@ import logging
 import voluptuous as vol
 import json
 import aiohttp
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICES
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME)
 
 _LOGGER = logging.getLogger(__name__)
-DOMAIN = "route"
 SUPPORTED_DOMAINS = ["sensor"]
-CONF_MIN_DST = 'mindst'
-DEFAULT_MIN_DST = 100
-CONF_MIN_TIME = 'mintime'
-DEFAULT_MIN_TIME = 5 #in minute
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({
-                vol.Optional(CONF_MIN_DST, default=DEFAULT_MIN_DST): cv.positive_float,
-                vol.Optional(CONF_MIN_TIME, default=DEFAULT_MIN_TIME): cv.positive_int,
                 vol.Required(CONF_DEVICES): vol.All(cv.ensure_list,),
                 })}, extra=vol.ALLOW_EXTRA,)
 
 async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     hass.data[DOMAIN] = {}
-    myconfig = {
-        "mindst": config[DOMAIN][CONF_MIN_DST],
-        "mintime": config[DOMAIN][CONF_MIN_TIME],
-        "devs": config[DOMAIN][CONF_DEVICES],
-    }
+    conf = config.get(DOMAIN)
+    if conf is not None:
+        device = conf.get(CONF_DEVICES)
+        if device is not None:
+            hass.data[DOMAIN][CONF_DEVICES] = device
+            return True
+            
+    _LOGGER.error(
+        "please provide route: devices: section in the configuration.yaml",
+    )
+    return False
 
-    sensors_gps = hass.data[DOMAIN]["sensors_gps"] = SensorsGps(hass,myconfig)
+async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
+    """Setup up a config entry."""
+    if not hass.data[DOMAIN] or not hass.data[DOMAIN][CONF_DEVICES]:
+        _LOGGER.error(
+            "please provide route: devices: section in the configuration.yaml",
+        )
+
+    sensors_gps = hass.data[DOMAIN]["sensors_gps"] = SensorsGps(hass, hass.data[DOMAIN][CONF_DEVICES])
     await sensors_gps.getDeviceTrackers()
     async_track_time_interval(hass, sensors_gps.async_update, timedelta(seconds=60))
 
     for platform in SUPPORTED_DOMAINS:
-        hass.async_create_task(async_load_platform(hass, platform, DOMAIN, {}, config))
+        hass.async_create_task(async_load_platform(hass, platform, DOMAIN, {}, {}))
 
     entities = {}
-    for device in myconfig["devs"]:
+    for device in hass.data[DOMAIN][CONF_DEVICES]:
         device_info = device.split('.')
         friendly_name = device_info[1]
         if hass.states.get(device) != None:
@@ -50,7 +58,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
         if device_info[0] == 'device_tracker' or device_info[0] == "person":
             fullname = 'sensor.virtual_'+device.replace(".", "_")
         entities[fullname] = friendly_name
-
+        
     try:
         url = "/api/panel_custom/route"
         location = hass.config.path("custom_components/route/frontend")
@@ -64,8 +72,8 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
         }
 
         config = {}
-        config["mindst"] = myconfig["mindst"]
-        config["mintime"] = myconfig["mintime"]
+        config[CONF_MIN_DST] = entry.data[CONF_MIN_DST]
+        config[CONF_MIN_TIME] = entry.data[CONF_MIN_TIME]
         config["entities"] = entities
         config["_panel_custom"] = custom_panel_config
 
@@ -84,11 +92,10 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     return True
 
 class SensorsGps:
-    def __init__(self, hass, mycfg):
+    def __init__(self, hass, devs):
         self.hass = hass
         self.states = {}
-        self._cfg = mycfg
-        self._devs = self._cfg["devs"]
+        self._devs = devs
 
     async def async_update(self, now, **kwargs) -> None:
         try:

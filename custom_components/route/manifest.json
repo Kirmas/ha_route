@@ -4,5 +4,6 @@
   "documentation": "https://github.com/Kirmas/ha_route",
   "dependencies": ["http"],
   "codeowners": ["@Kirmas"],
-  "requirements": []
+  "requirements": [],
+  "config_flow": true
 }
