@@ -4,7 +4,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.const import CONF_DEVICES
 import homeassistant.helpers.config_validation as cv
-from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME)
+from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
 
 _LOGGER = logging.getLogger(__name__)
 DEFAULT_MIN_DST = 100
@@ -23,19 +23,28 @@ class RouteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
-        errors = {}
-
         if user_input is not None:
+            _LOGGER.warning(user_input)
             return self.async_create_entry(
                 title="",
                 data={
                     CONF_MIN_DST: user_input[CONF_MIN_DST],
                     CONF_MIN_TIME: user_input[CONF_MIN_TIME],
+                    CONF_PERSON: user_input[CONF_PERSON],
                 },
             )
+        
+        dev_list = []
+        for key, value in self.hass.data["entity_info"].items(): 
+            if value["domain"] == "person":
+                attributes = self.hass.states.get(key).attributes
+                if "latitude" in attributes:
+                    dev_list.append(key)
 
         return self.async_show_form(
-            step_id="user", data_schema=CONFIG_SCHEMA
+            step_id="user", data_schema=CONFIG_SCHEMA.extend(
+                {vol.Required(CONF_PERSON): cv.multi_select(dev_list)}
+            )
         )
 
     @staticmethod
@@ -54,9 +63,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 data={
                     CONF_MIN_DST: user_input[CONF_MIN_DST],
                     CONF_MIN_TIME: user_input[CONF_MIN_TIME],
+                    CONF_PERSON: user_input[CONF_PERSON],
                 },
             )
 
+        dev_list = []
+        for key, value in self.hass.data["entity_info"].items(): 
+            if value["domain"] == "person":
+                attributes = self.hass.states.get(key).attributes
+                if "latitude" in attributes:
+                    dev_list.append(key)
+
         return self.async_show_form(
-            step_id="init", data_schema=CONFIG_SCHEMA
+            step_id="init", data_schema=CONFIG_SCHEMA.extend(
+                {vol.Required(CONF_PERSON): cv.multi_select(dev_list)}
+            )
         )

@@ -11,7 +11,7 @@ from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME)
+from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
 
 _LOGGER = logging.getLogger(__name__)
 SUPPORTED_DOMAINS = ["sensor"]
@@ -22,34 +22,25 @@ CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({
 
 async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     hass.data[DOMAIN] = {}
-    conf = config.get(DOMAIN)
-    if conf is not None:
-        device = conf.get(CONF_DEVICES)
-        if device is not None:
-            hass.data[DOMAIN][CONF_DEVICES] = device
-            return True
-            
-    _LOGGER.error(
-        "please provide route: devices: section in the configuration.yaml",
-    )
-    return False
+    return True
 
 async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     """Setup up a config entry."""
-    if not hass.data[DOMAIN] or not hass.data[DOMAIN][CONF_DEVICES]:
-        _LOGGER.error(
-            "please provide route: devices: section in the configuration.yaml",
-        )
-
-    sensors_gps = hass.data[DOMAIN]["sensors_gps"] = SensorsGps(hass, hass.data[DOMAIN][CONF_DEVICES])
+    sensors_gps = hass.data[DOMAIN]["sensors_gps"] = SensorsGps(hass, entry.data[CONF_PERSON])
     await sensors_gps.getDeviceTrackers()
     async_track_time_interval(hass, sensors_gps.async_update, timedelta(seconds=60))
 
-    for platform in SUPPORTED_DOMAINS:
-        hass.async_create_task(async_load_platform(hass, platform, DOMAIN, {}, {}))
+#    for platform in SUPPORTED_DOMAINS:
+#        hass.async_create_task(async_load_platform(hass, platform, DOMAIN, {}, {}))
+
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(
+            entry, "sensor"
+        )
+    )
 
     entities = {}
-    for device in hass.data[DOMAIN][CONF_DEVICES]:
+    for device in entry.data[CONF_PERSON]:
         device_info = device.split('.')
         friendly_name = device_info[1]
         if hass.states.get(device) != None:

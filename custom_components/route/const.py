@@ -3,3 +3,4 @@
 DOMAIN = "route"
 CONF_MIN_TIME = 'mintime'
 CONF_MIN_DST = 'mindst'
+CONF_PERSON = 'person'

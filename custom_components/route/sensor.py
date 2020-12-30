@@ -8,11 +8,11 @@ from homeassistant.const import (ATTR_LATITUDE, ATTR_LONGITUDE)
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None) -> None:
-
+async def async_setup_entry(hass, entry, async_add_devices):
+    _LOGGER.warning("async_setup_entry")
     sensors_gps = hass.data[DOMAIN]["sensors_gps"]
     for key,value in sensors_gps.states.items():
-        async_add_entities([GPSSensor(sensors_gps, key)])
+        async_add_devices([GPSSensor(sensors_gps, key)])
 
 class GPSSensor(Entity):
 
@@ -23,7 +23,22 @@ class GPSSensor(Entity):
         self._name = 'virtual_'+self._entity.replace('.','_')
         self._state = ''
 
+    @property
+    def device_info(self):
+        """Return device information about route."""
+        return {
+            "identifiers": {(DOMAIN)},
+            "name": "route",
+            "manufacturer": "@Kirmas",
+            "model": "",
+            "sw_version": "0.2.0",
+            "entry_type": "service",
+        }
 
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return self._entity
 
     #for HASS
     @property
