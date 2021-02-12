@@ -9,7 +9,6 @@ from homeassistant.const import (ATTR_LATITUDE, ATTR_LONGITUDE)
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_devices):
-    _LOGGER.warning("async_setup_entry")
     sensors_gps = hass.data[DOMAIN]["sensors_gps"]
     for key,value in sensors_gps.states.items():
         async_add_devices([GPSSensor(sensors_gps, key)])
@@ -27,7 +26,7 @@ class GPSSensor(Entity):
     def device_info(self):
         """Return device information about route."""
         return {
-            "identifiers": {(DOMAIN)},
+            "identifiers": {(DOMAIN, "01932d66-6d6e-11eb-9439-0242ac130002")},
             "name": "route",
             "manufacturer": "@Kirmas",
             "model": "",
