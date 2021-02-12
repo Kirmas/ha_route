@@ -30,7 +30,7 @@ class GPSSensor(Entity):
             "name": "route",
             "manufacturer": "@Kirmas",
             "model": "",
-            "sw_version": "0.2.0",
+            "sw_version": "1.0.0",
             "entry_type": "service",
         }
 
