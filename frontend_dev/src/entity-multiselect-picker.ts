@@ -2,6 +2,8 @@ import {
   LitElement,
   html,
   css,
+  customElement,
+  property
 } from "lit-element";
 
 import {
@@ -11,21 +13,23 @@ import {
   mdiCheck,
 } from "@mdi/js";
 
+import {
+  HomeAssistant
+} from "../homeassistant-frontend/src/types";
+
+@customElement("entity-multiselect-picker")
 export class EntityMultiselectPickerElement extends LitElement {
+  @property({ attribute: false }) public open: boolean;
+  @property({ attribute: false }) public searchValue: string;
+  @property({ attribute: false }) public selectedEntityIds: Array<any>;
+  @property({ attribute: false }) public entityIds: Map<any, any>;
+  @property({ attribute: false }) public hass!: HomeAssistant;
+  @property({ attribute: false }) public label: any;
+
   constructor() {
     super();
     this.open = false;
     this.searchValue = "";
-  }
-
-  static get properties() {
-    return {
-      hass: { type: Object },
-      entityIds: { type: Map },
-      selectedEntityIds: { type: Array },
-      searchValue: { type: String },
-      open: { type: Boolean },
-    };
   }
 
   renderEntityId(entityId)
@@ -335,5 +339,3 @@ export class EntityMultiselectPickerElement extends LitElement {
     this.dispatchEvent(event);
   }
 }
-
-customElements.define("entity-multiselect-picker",  EntityMultiselectPickerElement);

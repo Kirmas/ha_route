@@ -4,27 +4,31 @@ import {
   LitElement,
   html,
   css,
+  customElement,
+  property,
 } from "lit-element";
 
 import {
   mdiCalendar
 } from "@mdi/js";
 
+import {
+  HomeAssistant
+} from "../homeassistant-frontend/src/types";
+
+@customElement("ha-route-day-picker")
 export class DayPickerElement extends LitElement {
+  @property({ attribute: false }) public open: Boolean;
+  @property({ attribute: false }) public date: Date;
+  @property({ attribute: false }) public hass!: HomeAssistant;
+  @property({ attribute: false }) public disabled: Boolean;
+
   constructor() {
     super();
     this.open = false;
   }
-
-  static get properties() {
-    return {
-      hass: { type: Object },
-      date: { type: Date },
-      open: { type: Boolean },
-    };
-  }
   
-  get _daypicker() {
+  get _daypicker() : any  {
     return this.shadowRoot.querySelector('.route-day-picker');
   }
 
@@ -162,5 +166,3 @@ export class DayPickerElement extends LitElement {
       this._closeDateRange();
   }
 }
-
-customElements.define("ha-route-day-picker",  DayPickerElement);

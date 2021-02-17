@@ -1,8 +1,23 @@
 import "wired-card";
+import {
+  HassEntity
+} from "home-assistant-js-websocket";
 
-import {LitElement, html, css, customElement, property} from "lit-element";
-import {HomeAssistant} from "../homeassistant-frontend/src/types";
-import {fetchDate} from "../homeassistant-frontend/src/data/history";
+import {
+  LitElement, 
+  html, 
+  css, 
+  customElement, 
+  property
+} from "lit-element";
+
+import {
+  HomeAssistant
+} from "../homeassistant-frontend/src/types";
+
+import {
+  CustomPanelInfo
+} from "../homeassistant-frontend/src/data/panel_custom";
 
 import "./day-picker.ts";
 import "./entity-multiselect-picker.ts";
@@ -22,27 +37,15 @@ class RouteInfo {
 
 @customElement("ha-panel-route")
 class RoutePanel extends LitElement {
-  private _startDate: Date;
-  private _endDate: Date;
-  routeData: Map<any, any>;
-  private _isLoading: boolean;
-  private _entityIds: any;
+  @property({ attribute: false }) public  _startDate: Date;
+  @property({ attribute: false }) public  _endDate: Date;
+  @property({ attribute: false }) public routeData: Map<any, any>;
+  @property({ attribute: false }) public  _isLoading: boolean;
+  @property({ attribute: false }) public  _entityIds: Array<any>;
   @property({ attribute: false }) public hass!: HomeAssistant;
-  panel: any;
-  narrow: unknown;
-  
-  static get properties() {
-    return {
-      hass: { type: Object },
-      narrow: { type: Boolean },
-      route: { type: Object },
-      panel: { type: Object },
-      routeData: { type: Map },
-      _startDate: { type: Date },
-      _endDate: { type: Date },
-      _entityIds: { type: Array },
-    };
-  }
+  @property({ attribute: false }) public panel!: CustomPanelInfo;
+  @property({ attribute: false }) public narrow: Boolean;
+  @property({ attribute: false }) public entities: Map<any, any>;
 
   constructor() {
     super();
@@ -97,14 +100,11 @@ class RoutePanel extends LitElement {
     }
 
     this._isLoading = true;
-    const stateHistory = await fetchDate(this.hass, this._startDate, this._endDate, this._entityIds.join());
-    
-    // const stateHistory = computeHistory(
-    //   this.hass,
-    //   dateHistory,
-    //   this.hass.localize,
-    //   this.hass.language
-    // );
+    const stateHistory = await this.hass.callApi<Promise<HassEntity[][]>>(
+      "GET",
+      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityIds.join()}`
+    );
+
     if (!stateHistory) {
       this._isLoading = false;
       this.routeData = new Map();
@@ -166,7 +166,7 @@ class RoutePanel extends LitElement {
         prev = stateInfo[index];
       }
       
-      this.routeData.set(this.panel.config.entities.get(stateInfo[0].entity_id), routes);
+      this.routeData.set(this.entities.get(stateInfo[0].entity_id), routes);
     });
     
     this._isLoading = false;
@@ -191,8 +191,8 @@ class RoutePanel extends LitElement {
   firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
     /*Convert data from object to Map*/
-    this.panel.config.entities = new Map(Object.entries(this.panel.config.entities));
-    this._entityIds = Array.from(this.panel.config.entities.keys());
+    this.entities = new Map(Object.entries(this.panel.config.entities));
+    this._entityIds = Array.from(this.entities.keys());
   }
 
   updated(changedProps) {
@@ -227,7 +227,7 @@ class RoutePanel extends LitElement {
           ></ha-route-day-picker>
           <entity-multiselect-picker
             .hass=${this.hass}
-            .entityIds=${this.panel.config.entities}
+            .entityIds=${this.entities}
             .selectedEntityIds=${this._entityIds}
             ?narrow = ${this.narrow}
             @change=${this.entityChanged}
@@ -266,5 +266,3 @@ class RoutePanel extends LitElement {
     ];
   }
 }
-
-//customElements.define("ha-panel-route", RoutePanel);

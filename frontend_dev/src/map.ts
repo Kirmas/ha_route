@@ -1,4 +1,10 @@
-import {LitElement, html, css} from "lit-element";
+import {
+  LitElement, 
+  html, 
+  css,
+  customElement,
+  property
+} from "lit-element";
 
 import {
   Control,
@@ -18,18 +24,22 @@ import {
   Map
 } from "leaflet";
 
+import {
+  HomeAssistant
+} from "../homeassistant-frontend/src/types";
+
+@customElement("ha-route-map")
 export class MapElement extends LitElement {
+  @property({ attribute: false }) public markers: any[];
+  @property({ attribute: false }) public polyLines: any[];
+  @property({ attribute: false }) public map: Map;
+  @property({ attribute: false }) public hass!: HomeAssistant;
+  @property({ attribute: false }) public routeData: Map<any, any>;
+
   constructor() {
     super();
     this.markers = [];
     this.polyLines = [];
-  }
-
-  static get properties() {
-    return {
-      hass: { type: Object },
-      routeData: { type: Map },
-    };
   }
 
   firstUpdated(changedProps) {
@@ -169,5 +179,3 @@ export class MapElement extends LitElement {
     `;
   }
 }
-
-customElements.define("ha-route-map",  MapElement);
