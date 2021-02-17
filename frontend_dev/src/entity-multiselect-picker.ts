@@ -2,14 +2,14 @@ import {
   LitElement,
   html,
   css,
-} from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
+} from "lit-element";
 
 import {
   mdiClose,
   mdiMenuUp,
   mdiMenuDown,
   mdiCheck,
-} from "https://unpkg.com/@mdi/js@5.8.55/mdi.js?module";
+} from "@mdi/js";
 
 export class EntityMultiselectPickerElement extends LitElement {
   constructor() {

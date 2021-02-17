@@ -1,7 +1,6 @@
 import "wired-card";
-import {LitElement, html, css, customElement, property} from "lit-element";
-import {HassEntity} from "home-assistant-js-websocket";
 
+import {LitElement, html, css, customElement, property} from "lit-element";
 import {HomeAssistant} from "../homeassistant-frontend/src/types";
 import {fetchDate} from "../homeassistant-frontend/src/data/history";
 
@@ -21,7 +20,7 @@ class RouteInfo {
   }
 }
 
-@customElement("route-frontend")
+@customElement("ha-panel-route")
 class RoutePanel extends LitElement {
   private _startDate: Date;
   private _endDate: Date;
@@ -268,4 +267,4 @@ class RoutePanel extends LitElement {
   }
 }
 
-customElements.define("ha-panel-route", RoutePanel);
+//customElements.define("ha-panel-route", RoutePanel);

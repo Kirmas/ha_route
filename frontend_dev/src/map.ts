@@ -1,8 +1,4 @@
-import {
-  LitElement,
-  html,
-  css,
-} from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
+import {LitElement, html, css} from "lit-element";
 
 import {
   Control,
@@ -20,7 +16,7 @@ import {
   Icon,
   TileLayer,
   Map
-} from "https://unpkg.com/leaflet@1.7.1/dist/leaflet-src.esm.js?module"
+} from "leaflet";
 
 export class MapElement extends LitElement {
   constructor() {
