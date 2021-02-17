@@ -11,7 +11,4 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v2"
-      - uses: JesseTG/rm@v1.0.2
-        with:
-          path: ../../frontend_dev
       - uses: home-assistant/actions/hassfest@master
