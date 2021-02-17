@@ -48,7 +48,7 @@ const DevelopPlugins = [
     extensions,
     exclude: [require.resolve("@mdi/js/mdi.js")],
   }),
-  entrypointHashmanifest({ manifestName: "./aaaa/manifest.json" }),
+  entrypointHashmanifest({ manifestName: "../custom_components/route/frontend/manifest.json" }),
 ];
 
 const BuildPlugins = DevelopPlugins.concat([
@@ -65,7 +65,7 @@ const inputconfig = {
 };
 const outputconfig = (isDev) => {
   return {
-    dir: "./aaaa/",
+    dir: "../custom_components/route/frontend/",
     chunkFileNames: !isDev ? "c.[hash].js" : "[name]-dev.js",
     assetFileNames: !isDev ? "a.[hash].js" : "[name]-dev.js",
     entryFileNames: "e.[hash].js",
@@ -77,7 +77,7 @@ const outputconfig = (isDev) => {
 function createServer() {
   const server = http.createServer((request, response) => {
     return handler(request, response, {
-      public: "./aaaa/",
+      public: "../custom_components/route/frontend/",
     });
   });
 
@@ -133,9 +133,9 @@ gulp.task("rollup-build", async function (task) {
 });
 
 function writeEntrypoint() {
-  const entrypointManifest = require(path.resolve("./aaaa/manifest.json"));
+  const entrypointManifest = require(path.resolve("../custom_components/route/frontend/manifest.json"));
   fs.writeFileSync(
-    path.resolve("./aaaa/entrypoint.js"),
+    path.resolve("../custom_components/route/frontend/entrypoint.js"),
     `
 try {
   new Function("import('/hacsfiles/frontend/${entrypointManifest["./src/route-panel.ts"]}')")();

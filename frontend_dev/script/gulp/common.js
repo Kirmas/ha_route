@@ -7,7 +7,7 @@ require("./rollup.js");
 
 gulp.task("cleanup", (task) => {
   del.sync(["./homeassistant-frontend/build/**", "./homeassistant-frontend/build"]);
-  //del.sync(["./hacs_frontend/*.js", "./hacs_frontend/*.json", "./hacs_frontend/*.gz"]);
+  del.sync(["../custom_components/route/frontend/*.js", "../custom_components/route/frontend/*.json", "../custom_components/route/frontend/*.gz"], {force: true});
   task();
 });
 
