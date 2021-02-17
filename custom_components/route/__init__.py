@@ -59,7 +59,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
             "name": "ha-panel-route",
             "embed_iframe": False,
             "trust_external": False,
-            "module_url": url + "/route-panel.js",
+            "js_url": url + "/entrypoint.js",
         }
 
         config = {}

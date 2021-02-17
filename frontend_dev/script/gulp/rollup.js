@@ -138,10 +138,10 @@ function writeEntrypoint() {
     path.resolve("../custom_components/route/frontend/entrypoint.js"),
     `
 try {
-  new Function("import('/hacsfiles/frontend/${entrypointManifest["./src/route-panel.ts"]}')")();
+  new Function("import('/api/panel_custom/route/${entrypointManifest["./src/route-panel.ts"]}')")();
 } catch (err) {
   var el = document.createElement('script');
-  el.src = '/hacsfiles/frontend/${entrypointManifest["./src/route-panel.ts"]}';
+  el.src = '/api/panel_custom/route/${entrypointManifest["./src/route-panel.ts"]}';
   document.body.appendChild(el);
 }
   `,
