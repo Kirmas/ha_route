@@ -4,6 +4,7 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs-extra");
 const log = require("fancy-log");
+const del = require("del");
 const { string } = require("rollup-plugin-string");
 const handler = require("serve-handler");
 const json = require("@rollup/plugin-json");
@@ -130,6 +131,7 @@ gulp.task("rollup-build", async function (task) {
   await bundle.write(outputconfig(false));
   writeEntrypoint();
   task();
+  del.sync(["../custom_components/route/frontend/*.json"], {force: true});
 });
 
 function writeEntrypoint() {
