@@ -34,7 +34,7 @@ export class MapElement extends LitElement {
   @property({ attribute: false }) public polyLines: any[];
   @property({ attribute: false }) public map: Map;
   @property({ attribute: false }) public hass!: HomeAssistant;
-  @property({ attribute: false }) public routeData: Map<any, any>;
+  @property({ attribute: false }) public routeData: Map<string, Array<any>>;
 
   constructor() {
     super();
@@ -68,20 +68,24 @@ export class MapElement extends LitElement {
   }
 
   async updateMapItems() {
-    for (const [valueKey, valueMap] of this.routeData.entries()) {
+    for (const [valueKey, valueArray] of this.routeData.entries()) {
       var randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
       var prevValue = null;
       var n = 0;
       
-      for (const [key, value] of valueMap.entries()) {
+      for (const value of valueArray) {
         var marker = new Marker([value.latitude, value.longitude], {
-          title: `${n} ${valueKey} ${key} ${value.street}`,
+          title: `${n} ${valueKey} ${value.time} ${value.street}`,
         });
         ++n;
         marker.addTo(this.map);
         this.markers.push(marker);
 
         if(prevValue){
+          console.log("prevValue");
+          console.log(prevValue);
+          console.log("value");
+          console.log(value);
           var coordinates = [[prevValue.latitude, prevValue.longitude], [value.latitude, value.longitude]];
           let routesJSON = await new Promise(resolve => {
             var xhr = new XMLHttpRequest();
@@ -93,6 +97,9 @@ export class MapElement extends LitElement {
             };
             xhr.send();
           });
+
+          console.log("routesJSON");
+          console.log(routesJSON);
 
           routesJSON.routes[0].legs[0].steps.map(step =>
             step.geometry.coordinates.map(coordinate => 

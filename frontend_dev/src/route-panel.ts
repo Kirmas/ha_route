@@ -19,49 +19,25 @@ import {
   CustomPanelInfo
 } from "../homeassistant-frontend/src/data/panel_custom";
 
-import "./day-picker.ts";
-import "./entity-multiselect-picker.ts";
-import "./map.ts";
-
-class RouteInfo {
-  latitude: any;
-  longitude: any;
-  street: any;
-  
-  constructor(latitude, longitude, street){
-    this.latitude = latitude;
-    this.longitude = longitude;
-    this.street = street;
-  }
-}
+import {RouteInfo, fetchRouteDate} from "./data/helper"
+import "./day-picker";
+import "./entity-multiselect-picker";
+import "./map";
 
 @customElement("ha-panel-route")
 class RoutePanel extends LitElement {
-  @property({ attribute: false }) public  _startDate: Date;
-  @property({ attribute: false }) public  _endDate: Date;
-  @property({ attribute: false }) public routeData: Map<any, any>;
+  @property({ attribute: false }) public  day: Date;
+  @property({ attribute: false }) public routeData: Map<string, Array<RouteInfo>>;
   @property({ attribute: false }) public  _isLoading: boolean;
-  @property({ attribute: false }) public  _entityIds: Array<any>;
+  @property({ attribute: false }) public  _entityIds: Array<string>;
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) public panel!: CustomPanelInfo;
   @property({ attribute: false }) public narrow: Boolean;
-  @property({ attribute: false }) public entities: Map<any, any>;
+  @property({ attribute: false }) public entities: Map<string, string>;
 
   constructor() {
     super();
-
-    const start = new Date();
-    start.setHours(0);
-    start.setMinutes(0);
-    start.setSeconds(0);
-    this._startDate = start;
-
-    const end = new Date();
-    end.setHours(23);
-    end.setMinutes(59);
-    end.setSeconds(59);
-    this._endDate = end;
-    
+    this.day = new Date();    
     this.routeData = new Map();
   }
 
@@ -75,17 +51,17 @@ class RoutePanel extends LitElement {
 
   getDistance(origin, destination) {
     // return distance in meters
-    var lon1 = this.toRadian(origin[1]),
+    let lon1 = this.toRadian(origin[1]),
         lat1 = this.toRadian(origin[0]),
         lon2 = this.toRadian(destination[1]),
         lat2 = this.toRadian(destination[0]);
 
-    var deltaLat = lat2 - lat1;
-    var deltaLon = lon2 - lon1;
+    let deltaLat = lat2 - lat1;
+    let deltaLon = lon2 - lon1;
 
-    var a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
-    var c = 2 * Math.asin(Math.sqrt(a));
-    var EARTH_RADIUS = 6371;
+    let a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
+    let c = 2 * Math.asin(Math.sqrt(a));
+    let EARTH_RADIUS = 6371;
     return c * EARTH_RADIUS * 1000;
   }
 
@@ -98,67 +74,58 @@ class RoutePanel extends LitElement {
       this.routeData = new Map();
       return;
     }
-
     this._isLoading = true;
-    const stateHistory = await this.hass.callApi<Promise<HassEntity[][]>>(
-      "GET",
-      `history/period/${this._startDate.toISOString()}?end_time=${this._endDate.toISOString()}&filter_entity_id=${this._entityIds.join()}`
+    const stateHistory = await fetchRouteDate(
+      this.hass, 
+      this.day, 
+      this._entityIds
     );
-
     if (!stateHistory) {
       this._isLoading = false;
       this.routeData = new Map();
       return;
-    }
-    
+    }    
     const prevRouteData = new Map(this.routeData);
     this.routeData = new Map();
-
     stateHistory.forEach(stateInfo => {
       if (stateInfo.length === 0) {
         return;
       }
-
       var prev = null; 
-
-      var routes = new Map();
+      var routes = new Array<RouteInfo>();
       for (let index = 0; index < stateInfo.length; index++) {
         if(stateInfo[index].state == ""){
           continue;
         }
-
         if(stateInfo[index].state === (prev ? prev.state : "")){
           continue;
         }
         if(index + 1 != stateInfo.length)
         {
+          /*
           if(prev){
             var distance = this.getDistance(
               [prev.attributes.latitude, prev.attributes.longitude],
               [stateInfo[index].attributes.latitude, stateInfo[index].attributes.longitude]
             );
-
             if(distance < this.panel.config.mindst){
-              console.log(`${stateInfo[index].state} was skiped because distance(${distance}) < ${this.panel.config.mindst}`);
+              //console.log(`${stateInfo[index].state} was skiped because distance(${distance}) < ${this.panel.config.mindst}`);
               continue;
             }
           }
-
           var deltaTime = (
             new Date(stateInfo[index + 1].last_changed).valueOf() - 
             new Date(stateInfo[index].last_changed).valueOf()
           ) / 1000 / 60;
-
           if(deltaTime < this.panel.config.mintime)
           {
-            console.log(`${stateInfo[index].state} was skiped because deltaTime(${deltaTime}) < ${this.panel.config.mintime}`);
+            //console.log(`${stateInfo[index].state} was skiped because deltaTime(${deltaTime}) < ${this.panel.config.mintime}`);
             continue;
-          }
+          }*/
         }
-
-        routes.set(
-          new Date(stateInfo[index].last_changed), 
+        routes.push(
           new RouteInfo(
+            new Date(stateInfo[index].last_changed),
             stateInfo[index].attributes.latitude, 
             stateInfo[index].attributes.longitude, stateInfo[index].state
           )
@@ -168,20 +135,12 @@ class RoutePanel extends LitElement {
       
       this.routeData.set(this.entities.get(stateInfo[0].entity_id), routes);
     });
-    
     this._isLoading = false;
     this.requestUpdate("routeData", prevRouteData);
   }
 
   dateRangeChanged(ev) {
-    ev.detail.date.setHours(0);
-    ev.detail.date.setMinutes(0);
-    ev.detail.date.setSeconds(0);
-    this._startDate = new Date(ev.detail.date);
-    ev.detail.date.setHours(23);
-    ev.detail.date.setMinutes(59);
-    ev.detail.date.setSeconds(59);
-    this._endDate = new Date(ev.detail.date);
+    this.day = new Date(ev.detail.date);
   }
 
   entityChanged(ev) {
@@ -220,7 +179,7 @@ class RoutePanel extends LitElement {
         <div class="flex layout horizontal wrap">
           <ha-route-day-picker
             .hass=${this.hass}
-            .date=${this._startDate}
+            .date=${this.day}
             ?disabled=${this._isLoading}
             ?narrow = ${this.narrow}
             @change=${this.dateRangeChanged}
