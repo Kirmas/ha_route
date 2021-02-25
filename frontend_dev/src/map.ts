@@ -7,34 +7,24 @@ import {
 } from "lit-element";
 
 import {
-  Control,
-  DomEvent,
-  DomUtil,
-  Evented,
-  LatLng,
-  LatLngBounds,
-  Layer,
-  FeatureGroup,
-  Polygon,
-  Polyline,
-  Marker,
-  Browser,
-  Icon,
-  TileLayer,
-  Map
-} from "leaflet";
-
-import {
   HomeAssistant
 } from "../homeassistant-frontend/src/types";
+
+import {
+  setupLeafletMap,
+} from "../homeassistant-frontend/src/common/dom/setup-leaflet-map";
 
 @customElement("ha-route-map")
 export class MapElement extends LitElement {
   @property({ attribute: false }) public markers: any[];
   @property({ attribute: false }) public polyLines: any[];
-  @property({ attribute: false }) public map: Map;
+  @property({ attribute: false }) public map: any;
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) public routeData: Map<string, Array<any>>;
+  Leaflet: any;
+  private _darkMode: boolean;
+  loadMapPromise: Promise<void>;
+  tileLayer: any;
 
   constructor() {
     super();
@@ -42,39 +32,54 @@ export class MapElement extends LitElement {
     this.polyLines = [];
   }
 
+
+  fitMap() {
+    let bounds;
+
+    if (this.markers.length === 0) {
+      this.map.setView(
+        new this.Leaflet.LatLng(
+          this.hass.config.latitude,
+          this.hass.config.longitude
+        ),
+        14
+      );
+    } else {
+      bounds = new this.Leaflet.latLngBounds(
+        this.markers.map((item) => item.getLatLng())
+      );
+      this.map.fitBounds(bounds.pad(0.5));
+    }
+  }
+
+  async loadMap() {
+    this._darkMode = this.hass.themes.darkMode;
+    var mapElement = this.shadowRoot.getElementById("map");
+    [this.map, this.Leaflet, this.tileLayer] = await setupLeafletMap(
+      mapElement,
+      this._darkMode
+    );
+
+    //this.drawEntities(this.hass);
+    this.map.invalidateSize();
+    this.fitMap();
+  }
+
   firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
-    Icon.Default.imagePath = "/static/images/leaflet/images/";
-    var mapElement = this.shadowRoot.getElementById("map");
-    this.map = new Map(mapElement);
-    const style = document.createElement("link");
-    style.setAttribute("href", "/static/images/leaflet/leaflet.css");
-    style.setAttribute("rel", "stylesheet");
-    mapElement.parentNode.appendChild(style);
-    this.map.setView([this.hass.config.latitude, this.hass.config.longitude], 14);
-    var layer = new TileLayer(`https://{s}.basemaps.cartocdn.com/${
-      this.hass.themes.darkMode? "dark_all" : "light_all"
-    }/{z}/{x}/{y}${Browser.retina? "@2x.png" : ".png"}`,
-    {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd",
-      minZoom: 0,
-      maxZoom: 20,
-    });
-    layer.addTo(this.map);
-
-    this.map.invalidateSize();
+    this.loadMapPromise = this.loadMap();
   }
 
   async updateMapItems() {
+    await this.loadMapPromise;
+
     for (const [valueKey, valueArray] of this.routeData.entries()) {
-      var randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
+      var randomColor = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
       var prevValue = null;
       var n = 0;
       
       for (const value of valueArray) {
-        var marker = new Marker([value.latitude, value.longitude], {
+        var marker = this.Leaflet.marker([value.latitude, value.longitude], {
           title: `${n} ${valueKey} ${value.time} ${value.street}`,
         });
         ++n;
@@ -82,24 +87,17 @@ export class MapElement extends LitElement {
         this.markers.push(marker);
 
         if(prevValue){
-          console.log("prevValue");
-          console.log(prevValue);
-          console.log("value");
-          console.log(value);
           var coordinates = [[prevValue.latitude, prevValue.longitude], [value.latitude, value.longitude]];
-          let routesJSON = await new Promise(resolve => {
+          let routesJSON = await new Promise<any>(resolve => {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordinates[0][1]},${coordinates[0][0]};${coordinates[1][1]},${coordinates[1][0]}?overview=false&geometries=geojson&steps=true`, true);
             xhr.responseType = 'json';
 
-            xhr.onload = function(e) {
+            xhr.onload = function() {
               resolve(xhr.response);
             };
             xhr.send();
           });
-
-          console.log("routesJSON");
-          console.log(routesJSON);
 
           routesJSON.routes[0].legs[0].steps.map(step =>
             step.geometry.coordinates.map(coordinate => 
@@ -107,7 +105,7 @@ export class MapElement extends LitElement {
             )
           );
 
-          var polyLine = new Polyline(coordinates, { 
+          var polyLine = this.Leaflet.polyline(coordinates, { 
             color: randomColor 
           });
           polyLine.addTo(this.map);
@@ -118,10 +116,7 @@ export class MapElement extends LitElement {
       };
     };
 
-    var bounds = new LatLngBounds(
-      this.markers.map((item) => item.getLatLng())
-    );
-    this.map.fitBounds(bounds.pad(0.5));
+    this.fitMap();
   }
 
   updated(changedProps) {
