@@ -100,6 +100,18 @@ class RoutePanel extends LitElement {
         if(stateInfo[index].state === (prev ? prev.state : "")){
           continue;
         }
+
+        if(stateInfo[index].attributes.lati == null || stateInfo[index].attributes.long == null){
+          console.log(stateInfo[index].attributes);
+          if(stateInfo[index].attributes.latitude == null || stateInfo[index].attributes.longitude == null){
+            continue;
+          }
+
+          //backward compatibility    
+          stateInfo[index].attributes.lati = stateInfo[index].attributes.latitude;
+          stateInfo[index].attributes.long  = stateInfo[index].attributes.longitude;
+        }
+
         if(index + 1 != stateInfo.length)
         {
           /*

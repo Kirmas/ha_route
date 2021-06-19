@@ -1,9 +1,9 @@
 
 try {
-  new Function("import('/api/panel_custom/route/e.b4750db6.js')")();
+  new Function("import('/api/panel_custom/route/e.c1b94fb3.js')")();
 } catch (err) {
   var el = document.createElement('script');
-  el.src = '/api/panel_custom/route/e.b4750db6.js';
+  el.src = '/api/panel_custom/route/e.c1b94fb3.js';
   document.body.appendChild(el);
 }
   
