@@ -5,7 +5,7 @@ import voluptuous as vol
 import json
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICES
+from homeassistant.const import (CONF_DEVICES, ATTR_LATITUDE, ATTR_LONGITUDE)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from homeassistant.helpers.event import async_track_time_interval
@@ -104,8 +104,8 @@ class SensorsGps:
                 lon = 0
                 address = ""
                 if self.hass.states.get(device) != None:
-                    lat = self.hass.states.get(device).attributes['latitude']
-                    lon = self.hass.states.get(device).attributes['longitude']
+                    lat = self.hass.states.get(device).attributes[ATTR_LATITUDE]
+                    lon = self.hass.states.get(device).attributes[ATTR_LONGITUDE]
                 url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=" + str(lat) +"&lon="+ str(lon) +"&accept-language=ru&email=ihor666@ya.ru"
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url) as response:
