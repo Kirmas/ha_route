@@ -126,8 +126,8 @@ class RoutePanel extends LitElement {
         routes.push(
           new RouteInfo(
             new Date(stateInfo[index].last_changed),
-            stateInfo[index].attributes.latitude, 
-            stateInfo[index].attributes.longitude, stateInfo[index].state
+            stateInfo[index].attributes.lati, 
+            stateInfo[index].attributes.long, stateInfo[index].state
           )
         );
         prev = stateInfo[index];
