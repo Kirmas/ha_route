@@ -1,10 +1,13 @@
 import {
   LitElement, 
   html, 
-  css,
-  customElement,
+  css
+} from "lit";
+
+import {
+  customElement, 
   property
-} from "lit-element";
+} from "lit/decorators.js";
 
 import {
   HomeAssistant
@@ -13,6 +16,8 @@ import {
 import {
   setupLeafletMap,
 } from "../homeassistant-frontend/src/common/dom/setup-leaflet-map";
+
+import {antPath} from 'leaflet-ant-path';
 
 @customElement("ha-route-map")
 export class MapElement extends LitElement {
@@ -70,6 +75,23 @@ export class MapElement extends LitElement {
     this.loadMapPromise = this.loadMap();
   }
 
+  ColorLuminance(hex, lum) {
+    // validate hex string
+    hex = String(hex).replace(/[^0-9a-f]/gi, '');
+    if (hex.length < 6) {
+        hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    }
+    lum = lum || 0;
+    // convert to decimal and change luminosity
+    var rgb = "#", c, i;
+    for (i = 0; i < 3; i++) {
+        c = parseInt(hex.substr(i*2,2), 16);
+        c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
+        rgb += ("00"+c).substr(c.length);
+    }
+    return rgb;
+}
+
   async updateMapItems() {
     await this.loadMapPromise;
 
@@ -98,16 +120,26 @@ export class MapElement extends LitElement {
             };
             xhr.send();
           });
-
+          
           routesJSON.routes[0].legs[0].steps.map(step =>
             step.geometry.coordinates.map(coordinate => 
               coordinates.splice(coordinates.length - 1, 0, [coordinate[1], coordinate[0]])
             )
           );
 
-          var polyLine = this.Leaflet.polyline(coordinates, { 
-            color: randomColor 
+          var polyLine = antPath(coordinates, { 
+            "delay": 500,
+            "dashArray": [
+              10,
+              20
+            ],
+            "weight": 5,
+            "color": randomColor,
+            "pulseColor": this.ColorLuminance(randomColor, 0.5),
+            "paused": false,
+            "reverse": false,
           });
+
           polyLine.addTo(this.map);
           this.polyLines.push(polyLine);
         }
@@ -125,7 +157,10 @@ export class MapElement extends LitElement {
     {
       if(changedProps.get("routeData") == null || changedProps.get("routeData").size == 0)
       {
-        this.map.invalidateSize();
+        if(this.map)
+        {
+          this.map.invalidateSize();
+        }
       }
 
       this.markers.forEach(function (marker) {
@@ -178,6 +213,56 @@ export class MapElement extends LitElement {
         z-index: 0;
         background: inherit;
       }
+
+      @-webkit-keyframes leaflet-ant-path-animation {
+        from {
+          stroke-dashoffset: 100%; }
+        to {
+          stroke-dashoffset: 0%; } }
+      
+      @-moz-keyframes leaflet-ant-path-animation {
+        from {
+          stroke-dashoffset: 100%; }
+        to {
+          stroke-dashoffset: 0%; } }
+      
+      @-ms-keyframes leaflet-ant-path-animation {
+        from {
+          stroke-dashoffset: 100%; }
+        to {
+          stroke-dashoffset: 0%; } }
+      
+      @-o-keyframes leaflet-ant-path-animation {
+        from {
+          stroke-dashoffset: 100%; }
+        to {
+          stroke-dashoffset: 0%; } }
+      
+      @keyframes leaflet-ant-path-animation {
+        from {
+          stroke-dashoffset: 100%; }
+        to {
+          stroke-dashoffset: 0%; } }
+      
+      path.leaflet-ant-path {
+        fill: none;
+        -webkit-animation: 20s linear infinite leaflet-ant-path-animation;
+        -moz-animation: 20s linear infinite leaflet-ant-path-animation;
+        -ms-animation: 20s linear infinite leaflet-ant-path-animation;
+        -o-animation: 20s linear infinite leaflet-ant-path-animation;
+        animation: 20s linear infinite leaflet-ant-path-animation; }
+        path.leaflet-ant-path__hardware-acceleration {
+          -webkit-transform: translateZ(0);
+          -moz-transform: translateZ(0);
+          -ms-transform: translateZ(0);
+          -o-transform: translateZ(0);
+          transform: translateZ(0); }
+        path.leaflet-ant-path__reverse {
+          -webkit-animation-direction: reverse;
+          -moz-animation-direction: reverse;
+          -ms-animation-direction: reverse;
+          -o-animation-direction: reverse;
+          animation-direction: reverse; }
     `;
   }
 }

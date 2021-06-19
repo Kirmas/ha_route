@@ -6,10 +6,13 @@ import {
 import {
   LitElement, 
   html, 
-  css, 
+  css
+} from "lit";
+
+import {
   customElement, 
   property
-} from "lit-element";
+} from "lit/decorators.js";
 
 import {
   HomeAssistant
@@ -169,8 +172,7 @@ class RoutePanel extends LitElement {
     super.updated(changedProps);
 
     if (
-      changedProps.has("_startDate") ||
-      changedProps.has("_endDate") ||
+      changedProps.has("day") ||
       changedProps.has("_entityIds")
     ) {
       this.updateGPSHistory();
@@ -178,6 +180,10 @@ class RoutePanel extends LitElement {
   }
 
   render() {
+    if(this.entities == null)
+    {
+      return "";
+    }
     return html`
       <app-toolbar>
         <ha-menu-button

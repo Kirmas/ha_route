@@ -1,10 +1,13 @@
 import {
-  LitElement,
-  html,
-  css,
-  customElement,
+  LitElement, 
+  html, 
+  css
+} from "lit";
+
+import {
+  customElement, 
   property
-} from "lit-element";
+} from "lit/decorators.js";
 
 import {
   mdiClose,

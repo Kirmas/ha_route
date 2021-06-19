@@ -1,12 +1,15 @@
 import "app-datepicker";
 
 import {
-  LitElement,
-  html,
-  css,
-  customElement,
-  property,
-} from "lit-element";
+  LitElement, 
+  html, 
+  css
+} from "lit";
+
+import {
+  customElement, 
+  property
+} from "lit/decorators.js";
 
 import {
   mdiCalendar

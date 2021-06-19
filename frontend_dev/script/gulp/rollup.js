@@ -9,7 +9,7 @@ const { string } = require("rollup-plugin-string");
 const handler = require("serve-handler");
 const json = require("@rollup/plugin-json");
 const commonjs = require("@rollup/plugin-commonjs");
-const babel = require("rollup-plugin-babel");
+const babel = require("@rollup/plugin-babel").babel;
 const babelTypescript = require("@babel/preset-typescript");
 const babelDecorators = require("@babel/plugin-proposal-decorators");
 const babelClassProperties = require("@babel/plugin-proposal-class-properties");
@@ -38,7 +38,9 @@ const DevelopPlugins = [
   }),
   babel({
     babelrc: false,
+    compact: true,
     presets: [babelTypescript.default],
+    babelHelpers: "bundled",
     plugins: [
       "@babel/syntax-dynamic-import",
       "@babel/plugin-proposal-optional-chaining",
