@@ -102,7 +102,6 @@ class RoutePanel extends LitElement {
         }
 
         if(stateInfo[index].attributes.lati == null || stateInfo[index].attributes.long == null){
-          console.log(stateInfo[index].attributes);
           if(stateInfo[index].attributes.latitude == null || stateInfo[index].attributes.longitude == null){
             continue;
           }
