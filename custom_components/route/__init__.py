@@ -11,7 +11,7 @@ from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
+from .const import (ATTR_ROUTE_ENTITY_PICTURE, ATTR_ROUTE_FRIENDLY_NAME, DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
 
 _LOGGER = logging.getLogger(__name__)
 SUPPORTED_DOMAINS = ["sensor"]
@@ -30,9 +30,6 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     await sensors_gps.getDeviceTrackers()
     async_track_time_interval(hass, sensors_gps.async_update, timedelta(seconds=60))
 
-#    for platform in SUPPORTED_DOMAINS:
-#        hass.async_create_task(async_load_platform(hass, platform, DOMAIN, {}, {}))
-
     hass.async_create_task(
         hass.config_entries.async_forward_entry_setup(
             entry, "sensor"
@@ -42,13 +39,10 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     entities = {}
     for device in entry.data[CONF_PERSON]:
         device_info = device.split('.')
-        friendly_name = device_info[1]
-        if hass.states.get(device) != None:
-            friendly_name = hass.states.get(device).attributes['friendly_name']
         fullname = device
         if device_info[0] == 'device_tracker' or device_info[0] == "person":
             fullname = 'sensor.virtual_'+device.replace(".", "_")
-        entities[fullname] = friendly_name
+        entities.pop(fullname)
         
     try:
         url = "/api/panel_custom/route"
@@ -103,9 +97,13 @@ class SensorsGps:
                 lat = 0
                 lon = 0
                 address = ""
+                friendly_name = ""
+                entity_picture = ""
                 if self.hass.states.get(device) != None:
                     lat = self.hass.states.get(device).attributes[ATTR_LATITUDE]
                     lon = self.hass.states.get(device).attributes[ATTR_LONGITUDE]
+                    friendly_name = self.hass.states.get(device).attributes[ATTR_ROUTE_FRIENDLY_NAME]
+                    entity_picture = self.hass.states.get(device).attributes[ATTR_ROUTE_ENTITY_PICTURE]
                 url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=" + str(lat) +"&lon="+ str(lon) +"&accept-language=ru&email=ihor666@ya.ru"
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url) as response:
@@ -113,4 +111,4 @@ class SensorsGps:
                             decodedjson = json.loads(await response.text())
                             if "display_name" in decodedjson:
                                 address = decodedjson["display_name"]
-                self.states[device]=[address,lat,lon]
+                self.states[device]=[address,lat,lon, friendly_name, entity_picture]

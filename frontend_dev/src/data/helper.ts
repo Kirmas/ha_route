@@ -6,9 +6,11 @@ export class RouteInfo {
   latitude: number;
   longitude: number;
   street: string;
+  timeDelta: number;
   
   constructor(time:Date, latitude, longitude, street){
     this.time = time;
+    this.timeDelta = -1.0;
     this.latitude = latitude;
     this.longitude = longitude;
     this.street = street;
@@ -18,7 +20,7 @@ export class RouteInfo {
 export const fetchRouteDate = (
   hass: HomeAssistant,
   day: Date,
-  entityIds
+  entities
 ): Promise<HassEntity[][]> => {
 
   let startTime = new Date(day);
@@ -29,6 +31,17 @@ export const fetchRouteDate = (
 
   return hass.callApi(
     "GET",
-    `history/period/${startTime.toISOString()}?end_time=${endTime.toISOString()}&filter_entity_id=${entityIds.join()}`
+    `history/period/${startTime.toISOString()}?end_time=${endTime.toISOString()}&filter_entity_id=${entities.map(entity => entity.entity_id).join()}`
+  );
+};
+
+export const fetchEntityById = (
+  hass: HomeAssistant,
+  entityId: string
+): Promise<HassEntity> => {
+
+  return hass.callApi(
+    "GET",
+    `states/${entityId}`
   );
 };

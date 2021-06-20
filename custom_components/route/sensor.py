@@ -4,7 +4,7 @@
 import logging
 from . import DOMAIN
 from homeassistant.helpers.entity import Entity
-from .const import (ATTR_ROUTE_LATITUDE, ATTR_ROUTE_LONGITUDE)
+from .const import (ATTR_ROUTE_ENTITY_PICTURE, ATTR_ROUTE_REAL_NAME, ATTR_ROUTE_LATITUDE, ATTR_ROUTE_LONGITUDE)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,4 +57,6 @@ class GPSSensor(Entity):
         attrs = {}
         attrs[ATTR_ROUTE_LATITUDE] = self._sensors_gps.states[self._entity][1]
         attrs[ATTR_ROUTE_LONGITUDE] = self._sensors_gps.states[self._entity][2]
+        attrs[ATTR_ROUTE_REAL_NAME] = self._sensors_gps.states[self._entity][3]
+        attrs[ATTR_ROUTE_ENTITY_PICTURE] = self._sensors_gps.states[self._entity][4]
         return attrs

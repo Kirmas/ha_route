@@ -25,7 +25,7 @@ export class EntityMultiselectPickerElement extends LitElement {
   @property({ attribute: false }) public open: boolean;
   @property({ attribute: false }) public searchValue: string;
   @property({ attribute: false }) public selectedEntityIds: Array<any>;
-  @property({ attribute: false }) public entityIds: Map<any, any>;
+  @property({ attribute: false }) public entities: Array<any>;
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) public label: any;
 
@@ -35,9 +35,9 @@ export class EntityMultiselectPickerElement extends LitElement {
     this.searchValue = "";
   }
 
-  renderEntityId(entityId)
+  renderEntityId(entity)
   {
-    const selected = this.selectedEntityIds.includes(entityId[0]);
+    const selected = this.selectedEntityIds.includes(entity);
     return html`
       <div @click=${this._handleEntityClick} class="multiselect-list-element-container">
         <div class="multiselect-list-element-check">
@@ -47,8 +47,8 @@ export class EntityMultiselectPickerElement extends LitElement {
           ></ha-svg-icon>` : html``}
         </div>
         <div class="multiselect-list-element">
-          <div>${entityId[1]}</div>
-          <div class="secondary">${entityId[0]}</div>
+          <div>${entity.attributes.real_name}</div>
+          <div class="secondary">${entity.entity_id}</div>
         </div>
       </div>`
     ;
@@ -59,17 +59,17 @@ export class EntityMultiselectPickerElement extends LitElement {
   }
 
   get _filteredentityIds(){
-    if(this.searchValue){
-      return [...this.entityIds].filter(
-        ([key, value]) => key.includes(this.searchValue) || value.includes(this.searchValue)
-      );
-    }
-    else{
-      return [...this.entityIds];
-    }
+    return this.searchValue?
+      [...this.entities].filter(
+        entity => entity.entity_id.includes(this.searchValue) || entity.attributes.real_name.includes(this.searchValue)
+      ) : [...this.entities];
   }
 
   render(){
+    if(this.selectedEntityIds == null)
+    {
+      return ``;
+    }
     return html`
       <div class="multiselect" role="combobox" aria-expanded="true">
         <paper-input-container 
@@ -113,10 +113,10 @@ export class EntityMultiselectPickerElement extends LitElement {
             : this.label}</label>
           <div bind-value="" slot="input" class="multiselect-input-element" id="input-1">
             ${this.selectedEntityIds.length > 0 ? 
-              this.selectedEntityIds.map(entityId => 
+              this.selectedEntityIds.map(entity => 
                 html`
                   <div class="multiselect-tag">
-                    <div class="multiselect-tag-text">${this.entityIds.get(entityId)}</div>
+                    <div class="multiselect-tag-text">${entity.attributes.real_name}</div>
                     <mwc-icon-button
                       .label=${this.hass.localize(
                         "ui.components.entity.entity-picker.clear"
@@ -147,7 +147,7 @@ export class EntityMultiselectPickerElement extends LitElement {
         <div @click=${this._closeMultiselectPopup} class="multiselect-scrim ${this.open ? `multiselect-opened` : ``}"></div>
         <div class="multiselect-popup ${this.open ? `multiselect-opened` : ``}">
           <div class="multiselect-list">
-            ${this._filteredentityIds.map(entityId => this.renderEntityId(entityId))}
+            ${this._filteredentityIds.map(entity => this.renderEntityId(entity))}
           </div>
         </div>
       </div>
@@ -285,7 +285,7 @@ export class EntityMultiselectPickerElement extends LitElement {
 
   _clearValue(el){
     const clickedEntityId = el.path[6].innerText;
-    const index = this.selectedEntityIds.findIndex(entityId => this.entityIds.get(entityId) === clickedEntityId);
+    const index = this.selectedEntityIds.findIndex(entity => entity.attributes.real_name === clickedEntityId);
 
     if(index > -1)
     {
@@ -318,14 +318,19 @@ export class EntityMultiselectPickerElement extends LitElement {
       .find(element => element.className == "multiselect-list-element-container")
       .getElementsByClassName("multiselect-list-element")[0]
       .getElementsByClassName("secondary")[0].innerText;
-    const index = this.selectedEntityIds.indexOf(clickedEntityId);
+    const clickedEntity = this.entities.find(entity => entity.entity_id === clickedEntityId);
+    if(clickedEntity == null)
+    {
+      console.error(clickedEntityId + "is not finded in the entities array");
+    }
+    const index = this.selectedEntityIds.indexOf(clickedEntity);
     if(index > -1)
     {
       this.selectedEntityIds.splice(index, 1);
     }
     else
     {
-      this.selectedEntityIds.push(clickedEntityId);
+      this.selectedEntityIds.push(clickedEntity);
     }
     this.requestUpdate("selectedEntityIds");
     this.selectedEntityIdsChanged();

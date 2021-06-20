@@ -22,7 +22,7 @@ import {
   CustomPanelInfo
 } from "../homeassistant-frontend/src/data/panel_custom";
 
-import {RouteInfo, fetchRouteDate} from "./data/helper"
+import {RouteInfo, fetchRouteDate, fetchEntityById} from "./data/helper"
 import "./day-picker";
 import "./entity-multiselect-picker";
 import "./map";
@@ -30,13 +30,13 @@ import "./map";
 @customElement("ha-panel-route")
 class RoutePanel extends LitElement {
   @property({ attribute: false }) public  day: Date;
-  @property({ attribute: false }) public routeData: Map<string, Array<RouteInfo>>;
+  @property({ attribute: false }) public routeData: Map<HassEntity, Array<RouteInfo>>;
   @property({ attribute: false }) public  _isLoading: boolean;
-  @property({ attribute: false }) public  _entityIds: Array<string>;
+  @property({ attribute: false }) public  _entityIds: Array<HassEntity>;
+  @property({ attribute: false }) public entities: Array<HassEntity>;
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) public panel!: CustomPanelInfo;
   @property({ attribute: false }) public narrow: Boolean;
-  @property({ attribute: false }) public entities: Map<string, string>;
 
   constructor() {
     super();
@@ -144,10 +144,16 @@ class RoutePanel extends LitElement {
             stateInfo[index].attributes.long, stateInfo[index].state
           )
         );
+
+        if(routes.length > 1)
+        {
+          routes[routes.length - 2].timeDelta = (routes[routes.length - 1].time.valueOf() - routes[routes.length - 2].time.valueOf()) / 1000 / 60;
+        }
+
         prev = stateInfo[index];
       }
       
-      this.routeData.set(this.entities.get(stateInfo[0].entity_id), routes);
+      this.routeData.set(this.entities.find(entity => entity.entity_id == stateInfo[0].entity_id), routes);
     });
     this._isLoading = false;
     this.requestUpdate("routeData", prevRouteData);
@@ -161,15 +167,24 @@ class RoutePanel extends LitElement {
     this._entityIds = [...ev.detail.date];
   }
 
+  async buildEntities() {
+    this.entities = [];
+    for (let index = 0; index < this.panel.config.entities.length; index++) {
+      this.entities.push(await fetchEntityById(this.hass, this.panel.config.entities[index]));
+    }
+    this._entityIds = [...this.entities];
+  }
+
   firstUpdated(changedProps) {
     super.firstUpdated(changedProps);
-    /*Convert data from object to Map*/
-    this.entities = new Map(Object.entries(this.panel.config.entities));
-    this._entityIds = Array.from(this.entities.keys());
+    this.buildEntities();
   }
 
   updated(changedProps) {
     super.updated(changedProps);
+    if(this.entities == null || this._entityIds == null){
+      return;
+    }
 
     if (
       changedProps.has("day") ||
@@ -203,7 +218,7 @@ class RoutePanel extends LitElement {
           ></ha-route-day-picker>
           <entity-multiselect-picker
             .hass=${this.hass}
-            .entityIds=${this.entities}
+            .entities=${this.entities}
             .selectedEntityIds=${this._entityIds}
             ?narrow = ${this.narrow}
             @change=${this.entityChanged}

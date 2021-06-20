@@ -17,7 +17,10 @@ import {
   setupLeafletMap,
 } from "../homeassistant-frontend/src/common/dom/setup-leaflet-map";
 
+import "./route-entity-marker";
 import {antPath} from 'leaflet-ant-path';
+import { HassEntity } from "home-assistant-js-websocket";
+import { RouteInfo } from "./data/helper";
 
 @customElement("ha-route-map")
 export class MapElement extends LitElement {
@@ -25,7 +28,7 @@ export class MapElement extends LitElement {
   @property({ attribute: false }) public polyLines: any[];
   @property({ attribute: false }) public map: any;
   @property({ attribute: false }) public hass!: HomeAssistant;
-  @property({ attribute: false }) public routeData: Map<string, Array<any>>;
+  @property({ attribute: false }) public routeData: Map<HassEntity, Array<RouteInfo>>;
   Leaflet: any;
   private _darkMode: boolean;
   loadMapPromise: Promise<void>;
@@ -97,56 +100,89 @@ export class MapElement extends LitElement {
 
     for (const [valueKey, valueArray] of this.routeData.entries()) {
       var randomColor = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
-      var prevValue = null;
+      var prevValue:Array<RouteInfo> = [];
       var n = 0;
       
       for (const value of valueArray) {
-        var marker = this.Leaflet.marker([value.latitude, value.longitude], {
-          title: `${n} ${valueKey} ${value.time} ${value.street}`,
-        });
-        ++n;
-        marker.addTo(this.map);
-        this.markers.push(marker);
-
-        if(prevValue){
-          var coordinates = [[prevValue.latitude, prevValue.longitude], [value.latitude, value.longitude]];
-          let routesJSON = await new Promise<any>(resolve => {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordinates[0][1]},${coordinates[0][0]};${coordinates[1][1]},${coordinates[1][0]}?overview=false&geometries=geojson&steps=true`, true);
-            xhr.responseType = 'json';
-
-            xhr.onload = function() {
-              resolve(xhr.response);
-            };
-            xhr.send();
-          });
+        if(prevValue.length == null || value.timeDelta > 10 || value.timeDelta < 0)
+        {
+          var marker = this.Leaflet.marker([value.latitude, value.longitude], {
+            icon: this.Leaflet.divIcon({
+              html: `
+                <route-entity-marker
+                  entity-id="${valueKey.entity_id}"
+                  entity-name="${valueKey.attributes.friendly_name}"
+                  entity-picture="${valueKey.attributes.entity_picture}"
+                  entity-color="${randomColor}"
+                  }
+                ></route-entity-marker>
+              `,
+              iconSize: [48, 48],
+              className: "",
+            }),
+            title: `${n++} ${value.time.toLocaleTimeString()} ${value.street}`,
+          })/*.bindTooltip(`${n++} ${value.timeDelta}`, 
+          {
+              permanent: true, 
+              direction: 'top'
+          }) */
           
-          routesJSON.routes[0].legs[0].steps.map(step =>
-            step.geometry.coordinates.map(coordinate => 
-              coordinates.splice(coordinates.length - 1, 0, [coordinate[1], coordinate[0]])
-            )
-          );
+          marker.addTo(this.map);
+          this.markers.push(marker);
+          prevValue.push(value);
+          if(prevValue.length > 1){
+            var cordinates:string = "";
+            for(var prev of prevValue)
+            {
+              cordinates += prev.longitude + "," + prev.latitude + ";";
+            }
+            cordinates = cordinates.slice(0, -1);
+            console.log(cordinates);
+            let routesJSON = await new Promise<any>(resolve => {
+              var xhr = new XMLHttpRequest();
+              xhr.open('GET', `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${cordinates}?overview=false&geometries=geojson&steps=true`, true);
+              xhr.responseType = 'json';
+  
+              xhr.onload = function() {
+                resolve(xhr.response);
+              };
+              xhr.send();
+            });
 
-          var polyLine = antPath(coordinates, { 
-            "delay": 500,
-            "dashArray": [
-              10,
-              20
-            ],
-            "weight": 5,
-            "color": randomColor,
-            "pulseColor": this.ColorLuminance(randomColor, 0.5),
-            "paused": false,
-            "reverse": false,
-          });
+            var cord = [[prevValue[0].latitude, prevValue[0].longitude]];
 
-          polyLine.addTo(this.map);
-          this.polyLines.push(polyLine);
+            routesJSON.routes[0].legs.map(leg => leg.steps.map(step =>
+              step.geometry.coordinates.map(coordinate => 
+                cord.push([coordinate[1], coordinate[0]])
+              )
+            ));
+
+            cord.push([prevValue[prevValue.length-1].latitude, prevValue[prevValue.length-1].longitude])
+  
+            var polyLine = antPath(cord, { 
+              "delay": 500,
+              "dashArray": [
+                10,
+                20
+              ],
+              "weight": 5,
+              "color": 	"#ffffff",
+              "pulseColor": randomColor,
+              "paused": false,
+              "reverse": false,
+            });
+  
+            polyLine.addTo(this.map);
+            this.polyLines.push(polyLine);
+            prevValue = prevValue.slice(-1);
+          }
         }
-
-        prevValue = value;
-      };
-    };
+        else
+        {
+          prevValue.push(value);
+        }
+      }
+    }
 
     this.fitMap();
   }
