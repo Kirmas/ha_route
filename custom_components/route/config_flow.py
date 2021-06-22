@@ -7,8 +7,8 @@ import homeassistant.helpers.config_validation as cv
 from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
 
 _LOGGER = logging.getLogger(__name__)
-DEFAULT_MIN_DST = 100
-DEFAULT_MIN_TIME = 5 #in minute
+DEFAULT_MIN_DST = 250
+DEFAULT_MIN_TIME = 8 #in minute
 
 
 CONFIG_SCHEMA = vol.Schema({

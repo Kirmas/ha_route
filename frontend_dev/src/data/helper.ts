@@ -7,13 +7,17 @@ export class RouteInfo {
   longitude: number;
   street: string;
   timeDelta: number;
-  
-  constructor(time:Date, latitude, longitude, street){
+  gps_accuracy: number;
+  debug_info: string;
+
+  constructor(time:Date, latitude, longitude, gps_accuracy, debug_info){
     this.time = time;
     this.timeDelta = -1.0;
     this.latitude = latitude;
     this.longitude = longitude;
-    this.street = street;
+    this.street = "";//use api in feature;
+    this.gps_accuracy = gps_accuracy;
+    this.debug_info = debug_info;
   }
 }
 
@@ -31,7 +35,7 @@ export const fetchRouteDate = (
 
   return hass.callApi(
     "GET",
-    `history/period/${startTime.toISOString()}?end_time=${endTime.toISOString()}&filter_entity_id=${entities.map(entity => entity.entity_id).join()}`
+    `history/period/${startTime.toISOString()}?end_time=${endTime.toISOString()}&filter_entity_id=${entities.map(entity => entity.entity_id).join()}&significant_changes_only=0`
   );
 };
 

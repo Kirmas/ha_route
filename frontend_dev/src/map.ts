@@ -29,6 +29,8 @@ export class MapElement extends LitElement {
   @property({ attribute: false }) public map: any;
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) public routeData: Map<HassEntity, Array<RouteInfo>>;
+  @property({ attribute: false }) public mintime: number;
+  
   Leaflet: any;
   private _darkMode: boolean;
   loadMapPromise: Promise<void>;
@@ -93,18 +95,29 @@ export class MapElement extends LitElement {
         rgb += ("00"+c).substr(c.length);
     }
     return rgb;
-}
+  }
+
+  hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');   // convert to Hex and prefix "0" if needed
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
 
   async updateMapItems() {
     await this.loadMapPromise;
 
     for (const [valueKey, valueArray] of this.routeData.entries()) {
-      var randomColor = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
+      var randomColor = this.hslToHex(Math.random() * 360, 100, 50);
       var prevValue:Array<RouteInfo> = [];
       var n = 0;
       
       for (const value of valueArray) {
-        if(prevValue.length == null || value.timeDelta > 10 || value.timeDelta < 0)
+        if(prevValue.length == null || value.timeDelta > this.mintime || value.timeDelta < 0)
         {
           var marker = this.Leaflet.marker([value.latitude, value.longitude], {
             icon: this.Leaflet.divIcon({
@@ -120,13 +133,24 @@ export class MapElement extends LitElement {
               iconSize: [48, 48],
               className: "",
             }),
-            title: `${n++} ${value.time.toLocaleTimeString()} ${value.street}`,
-          })/*.bindTooltip(`${n++} ${value.timeDelta}`, 
+            title: `${n} ${value.time.toLocaleTimeString()} ${value.debug_info}`,
+          }).bindTooltip(`${n++} ${value.timeDelta}`, 
           {
               permanent: true, 
               direction: 'top'
-          }) */
+          })
           
+          // create circle around if entity has accuracy
+          if (value.gps_accuracy) {
+            var marker2 = this.Leaflet.circle([value.latitude, value.longitude], {
+                interactive: false,
+                color: randomColor,
+                radius: value.gps_accuracy,
+              });
+              marker2.addTo(this.map);
+              this.markers.push(marker2);
+          }
+
           marker.addTo(this.map);
           this.markers.push(marker);
           prevValue.push(value);
@@ -137,7 +161,6 @@ export class MapElement extends LitElement {
               cordinates += prev.longitude + "," + prev.latitude + ";";
             }
             cordinates = cordinates.slice(0, -1);
-            console.log(cordinates);
             let routesJSON = await new Promise<any>(resolve => {
               var xhr = new XMLHttpRequest();
               xhr.open('GET', `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${cordinates}?overview=false&geometries=geojson&steps=true`, true);
@@ -178,7 +201,27 @@ export class MapElement extends LitElement {
           }
         }
         else
-        {
+        {/*
+          var marker = this.Leaflet.marker([value.latitude, value.longitude], {
+            title: `${n} ${value.time.toLocaleTimeString()} ${value.debug_info}`,
+          }).bindTooltip(`${n++} ${value.timeDelta}`, 
+          {
+              permanent: true, 
+              direction: 'top'
+          })
+          // create circle around if entity has accuracy
+          if (value.gps_accuracy) {
+            var marker2 = this.Leaflet.circle([value.latitude, value.longitude], {
+                interactive: false,
+                color: randomColor,
+                radius: value.gps_accuracy,
+              });
+              marker2.addTo(this.map);
+              this.markers.push(marker2);
+          }
+          
+          marker.addTo(this.map);
+          this.markers.push(marker);*/
           prevValue.push(value);
         }
       }

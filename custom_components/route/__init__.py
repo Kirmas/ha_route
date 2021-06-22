@@ -36,13 +36,10 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
         )
     )
 
-    entities = {}
+    entities = []
     for device in entry.data[CONF_PERSON]:
-        device_info = device.split('.')
         fullname = device
-        if device_info[0] == 'device_tracker' or device_info[0] == "person":
-            fullname = 'sensor.virtual_'+device.replace(".", "_")
-        entities.pop(fullname)
+        entities.push(fullname)
         
     try:
         url = "/api/panel_custom/route"

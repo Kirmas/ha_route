@@ -47,7 +47,7 @@ export class EntityMultiselectPickerElement extends LitElement {
           ></ha-svg-icon>` : html``}
         </div>
         <div class="multiselect-list-element">
-          <div>${entity.attributes.real_name}</div>
+          <div>${entity.attributes.friendly_name}</div>
           <div class="secondary">${entity.entity_id}</div>
         </div>
       </div>`
@@ -61,7 +61,7 @@ export class EntityMultiselectPickerElement extends LitElement {
   get _filteredentityIds(){
     return this.searchValue?
       [...this.entities].filter(
-        entity => entity.entity_id.includes(this.searchValue) || entity.attributes.real_name.includes(this.searchValue)
+        entity => entity.entity_id.includes(this.searchValue) || entity.attributes.friendly_name.includes(this.searchValue)
       ) : [...this.entities];
   }
 
@@ -116,7 +116,7 @@ export class EntityMultiselectPickerElement extends LitElement {
               this.selectedEntityIds.map(entity => 
                 html`
                   <div class="multiselect-tag">
-                    <div class="multiselect-tag-text">${entity.attributes.real_name}</div>
+                    <div class="multiselect-tag-text">${entity.attributes.friendly_name}</div>
                     <mwc-icon-button
                       .label=${this.hass.localize(
                         "ui.components.entity.entity-picker.clear"
@@ -285,7 +285,7 @@ export class EntityMultiselectPickerElement extends LitElement {
 
   _clearValue(el){
     const clickedEntityId = el.path[6].innerText;
-    const index = this.selectedEntityIds.findIndex(entity => entity.attributes.real_name === clickedEntityId);
+    const index = this.selectedEntityIds.findIndex(entity => entity.attributes.friendly_name === clickedEntityId);
 
     if(index > -1)
     {
