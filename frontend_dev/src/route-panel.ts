@@ -97,50 +97,42 @@ class RoutePanel extends LitElement {
       }
       var prev = null; 
       var routes = new Array<RouteInfo>();
-      
-      console.log("Start get data for:");
-      console.log(this.entities.find(entity => entity.entity_id == stateInfo[0].entity_id));
 
       for (let index = 0; index < stateInfo.length;) {        
-        console.log("index=" + index);
         if(stateInfo[index].attributes.latitude == null || stateInfo[index].attributes.longitude == null){
           stateInfo.splice(index, 1);
-          console.log("was removed because no data");
           continue;
         }
         if(index > 0)
         {
-          console.log("index > 0");
           var distance = this.getDistance(
             [stateInfo[index - 1].attributes.latitude, stateInfo[index - 1].attributes.longitude],
             [stateInfo[index].attributes.latitude, stateInfo[index].attributes.longitude]
           );
-          console.log("distance = "+distance + "gps_accuracy" + stateInfo[index].attributes.gps_accuracy);
           //180 looks like WI-FI geo data. Could be realy wrong.
           if(distance >= this.panel.config.mindst && stateInfo[index].attributes.gps_accuracy > 150)
           {
-            console.log("was removed because distance > 250 and gps_accuracy> 150");
             stateInfo.splice(index, 1);
             continue;
           }
 
-          console.log("prev gps_accuracy" + stateInfo[index - 1].attributes.gps_accuracy);
           if(stateInfo[index - 1].attributes.gps_accuracy >= distance && stateInfo[index].attributes.gps_accuracy >= distance){
+            let bDecrement = false;
             if(stateInfo[index - 1].attributes.gps_accuracy > stateInfo[index].attributes.gps_accuracy){
-              console.log("intersect revrite previus");
               stateInfo[index - 1].attributes.gps_accuracy = stateInfo[index].attributes.gps_accuracy;
               stateInfo[index - 1].attributes.latitude = stateInfo[index].attributes.latitude;
               stateInfo[index - 1].attributes.longitude = stateInfo[index].attributes.longitude;
+              bDecrement = true;
             }
 
-            console.log("was removed because intersect");
             stateInfo.splice(index, 1);
-            --index;
+            if(bDecrement){
+              --index;
+            }
             continue;
           }
 
           if(index > 1){
-            console.log("index > 1");
             var distance2 = this.getDistance(
               [stateInfo[index - 1].attributes.latitude, stateInfo[index - 1].attributes.longitude],
               [stateInfo[index - 2].attributes.latitude, stateInfo[index - 2].attributes.longitude]
@@ -149,14 +141,12 @@ class RoutePanel extends LitElement {
               [stateInfo[index - 2].attributes.latitude, stateInfo[index - 2].attributes.longitude],
               [stateInfo[index].attributes.latitude, stateInfo[index].attributes.longitude]
             );
-            console.log("distance2 = "+distance2 + " distance3=" + distance3);
             //move forvard check
             if(distance3 < distance2 && distance3 < distance){
               var timeDelta = (new Date(stateInfo[index].last_updated).valueOf() -
                 new Date(stateInfo[index - 1].last_updated).valueOf()
               ) / 1000 / 60;
               if(timeDelta < this.panel.config.mintime){
-                console.log("was removed because not move forward");
                 stateInfo.splice(index - 1, 1);
                 --index;
                 continue;
@@ -164,14 +154,12 @@ class RoutePanel extends LitElement {
             }
 
             if(distance >= this.panel.config.mindst && distance2 >= this.panel.config.mindst && distance3 < this.panel.config.mindst){
-              console.log("was removed because strange teleport");
               stateInfo.splice(index - 1, 1);
               --index;
               continue;
             }
           }
         }
-        console.log("not removed");
         ++index;
       }
 
@@ -197,7 +185,6 @@ class RoutePanel extends LitElement {
         prev = stateInfo[index];
       }
       
-      console.log(routes);
       this.routeData.set(this.entities.find(entity => entity.entity_id == stateInfo[0].entity_id), routes);
     });
     this._isLoading = false;

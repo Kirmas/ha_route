@@ -1,9 +1,9 @@
 
 try {
-  new Function("import('/api/panel_custom/route/e.908f681c.js')")();
+  new Function("import('/api/panel_custom/route/e.facecbe5.js')")();
 } catch (err) {
   var el = document.createElement('script');
-  el.src = '/api/panel_custom/route/e.908f681c.js';
+  el.src = '/api/panel_custom/route/e.facecbe5.js';
   document.body.appendChild(el);
 }
   
