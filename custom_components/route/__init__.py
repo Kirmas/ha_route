@@ -1,24 +1,10 @@
 """The route component."""
-from datetime import timedelta
 import logging
-import voluptuous as vol
-import json
-import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (CONF_DEVICES, ATTR_LATITUDE, ATTR_LONGITUDE)
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from .const import (ATTR_ROUTE_ENTITY_PICTURE, ATTR_ROUTE_FRIENDLY_NAME, DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
+from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
 
 _LOGGER = logging.getLogger(__name__)
-SUPPORTED_DOMAINS = ["sensor"]
-
-CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({
-                vol.Required(CONF_DEVICES): vol.All(cv.ensure_list,),
-                })}, extra=vol.ALLOW_EXTRA,)
 
 async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
     hass.data[DOMAIN] = {}
@@ -26,20 +12,11 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     """Setup up a config entry."""
-    sensors_gps = hass.data[DOMAIN]["sensors_gps"] = SensorsGps(hass, entry.data[CONF_PERSON])
-    await sensors_gps.getDeviceTrackers()
-    async_track_time_interval(hass, sensors_gps.async_update, timedelta(seconds=60))
-
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(
-            entry, "sensor"
-        )
-    )
 
     entities = []
     for device in entry.data[CONF_PERSON]:
         fullname = device
-        entities.push(fullname)
+        entities.append(fullname)
         
     try:
         url = "/api/panel_custom/route"
@@ -72,40 +49,3 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
         return False
 
     return True
-
-class SensorsGps:
-    def __init__(self, hass, devs):
-        self.hass = hass
-        self.states = {}
-        self._devs = devs
-
-    async def async_update(self, now, **kwargs) -> None:
-        try:
-            await self.getDeviceTrackers()
-        except:
-            _LOGGER.warning("Update failed")
-            return
-        async_dispatcher_send(self.hass, DOMAIN)
-
-    async def getDeviceTrackers(self):
-        for device in self._devs:
-            entity_domain = device.split('.')[0]
-            if entity_domain == "device_tracker" or entity_domain == "person":
-                lat = 0
-                lon = 0
-                address = ""
-                friendly_name = ""
-                entity_picture = ""
-                if self.hass.states.get(device) != None:
-                    lat = self.hass.states.get(device).attributes[ATTR_LATITUDE]
-                    lon = self.hass.states.get(device).attributes[ATTR_LONGITUDE]
-                    friendly_name = self.hass.states.get(device).attributes[ATTR_ROUTE_FRIENDLY_NAME]
-                    entity_picture = self.hass.states.get(device).attributes[ATTR_ROUTE_ENTITY_PICTURE]
-                url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=" + str(lat) +"&lon="+ str(lon) +"&accept-language=ru&email=ihor666@ya.ru"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as response:
-                        if response.status == 200:
-                            decodedjson = json.loads(await response.text())
-                            if "display_name" in decodedjson:
-                                address = decodedjson["display_name"]
-                self.states[device]=[address,lat,lon, friendly_name, entity_picture]

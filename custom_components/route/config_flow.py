@@ -2,7 +2,6 @@ import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.const import CONF_DEVICES
 import homeassistant.helpers.config_validation as cv
 from .const import (DOMAIN, CONF_MIN_DST, CONF_MIN_TIME, CONF_PERSON)
 
